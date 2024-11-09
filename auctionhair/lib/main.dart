@@ -1,9 +1,12 @@
+// main.dart
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'telegram_controller.dart';
 import 'widgets/navbar.dart';
 
 void main() {
+  Get.put(TelegramController()); // Инициализируем контроллер
   runApp(const MainApp());
 }
 
@@ -13,7 +16,10 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      home: NavBar(), // Ваш главный виджет
+      theme: ThemeData(
+        scaffoldBackgroundColor: const Color(0xFFFFFFFF),
+      ),
+      home: NavBar(),
     );
   }
 }

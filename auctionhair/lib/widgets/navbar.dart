@@ -43,9 +43,10 @@ class _NavBarState extends State<NavBar> {
     return Scaffold(
       body: _screens[_selectedIndex],
       bottomNavigationBar: SizedBox(
-        height: 80, // Установите желаемую высоту навбара
+        height: 80,
         child: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
+          backgroundColor: const Color(0xFFFFFFFF), // Устанавливаем белый фон
           items: [
             BottomNavigationBarItem(
               icon: _buildIcon('assets/icons/trades_active.svg',

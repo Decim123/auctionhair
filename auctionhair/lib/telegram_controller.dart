@@ -1,3 +1,5 @@
+// telegram_controller.dart
+
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
@@ -5,6 +7,7 @@ import 'dart:js' as js;
 
 class TelegramController extends GetxController {
   Map<String, dynamic>? telegramData;
+  int? userId; // Переменная для хранения Telegram ID пользователя
 
   @override
   void onInit() {
@@ -16,6 +19,9 @@ class TelegramController extends GetxController {
     telegramData = initTelegramWebApp();
     if (telegramData != null) {
       debugPrint('Telegram Data: $telegramData');
+      userId =
+          telegramData?['user']?['id']; // Извлекаем Telegram ID пользователя
+      debugPrint('Telegram User ID: $userId');
     } else {
       debugPrint('Telegram data is null. This app is opened outside Telegram');
     }
