@@ -16,7 +16,7 @@ class Header extends StatelessWidget {
         style: const TextStyle(
           color: Color.fromARGB(
               255, 162, 173, 175), // Цвет текста rgb(162, 173, 175)
-          fontSize: 20, // Размер шрифта
+          fontSize: 12, // Размер шрифта
           fontWeight: FontWeight.bold, // Жирность шрифта (если нужно)
         ),
       ),

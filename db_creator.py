@@ -4,9 +4,9 @@ import asyncio
 async def create_db():
     async with aiosqlite.connect('db.sqlite') as db:
         await db.execute('''
-            CREATE TABLE IF NOT EXISTS users (
+                CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY,
-                tg_id INTEGER,
+                tg_id INTEGER UNIQUE,
                 username TEXT,
                 full_name TEXT,
                 first_name TEXT,
@@ -15,11 +15,11 @@ async def create_db():
                 lang TEXT,
                 phone TEXT,
                 email TEXT,
-                rating INTEGER,
+                rating INTEGER DEFAULT 100,
                 rating_all TEXT,
-                city TEXT,
-                tarif TEXT,
-                verify BOOLEAN,
+                city TEXT DEFAULT 'Не указан',
+                tarif TEXT DEFAULT 'Стандарт',
+                verify BOOLEAN DEFAULT FALSE,
                 notify_message BOOLEAN,
                 notify_recomendation BOOLEAN,
                 notify_sale BOOLEAN,

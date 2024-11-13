@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -14,33 +15,51 @@ class UserInfoWidget extends StatefulWidget {
 class _UserInfoWidgetState extends State<UserInfoWidget> {
   String? userName;
   bool isLoading = true;
+  int? userId;
+  String? imageUrl;
 
   @override
   void initState() {
     super.initState();
+
+    // Игнорируем ошибки сертификата SSL
+    HttpOverrides.global = MyHttpOverrides();
+
+    TelegramController telegramController = Get.find<TelegramController>();
+    userId = telegramController.userId;
+    print('User ID: $userId'); // Отладочное сообщение
     fetchUserName();
   }
 
   Future<void> fetchUserName() async {
-    TelegramController telegramController = Get.find<TelegramController>();
-    int? userId = telegramController.userId;
-
     if (userId != null) {
-      var response = await http.post(
-        Uri.parse('https://fc87-176-59-162-192.ngrok-free.app/user_info'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'tg_id': userId, 'function': 'username'}),
-      );
+      try {
+        var response = await http.post(
+          Uri.parse('https://dcf2-176-59-162-63.ngrok-free.app/user_info'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'tg_id': userId, 'function': 'username'}),
+        );
 
-      if (response.statusCode == 200) {
-        var data = jsonDecode(response.body);
+        if (response.statusCode == 200) {
+          var data = jsonDecode(response.body);
+          setState(() {
+            userName = data['username'];
+            // Формируем URL изображения, используем http вместо https
+            imageUrl =
+                'https://dcf2-176-59-162-63.ngrok-free.app/img/userpic/${userId}.jpg';
+            isLoading = false;
+            print(imageUrl);
+          });
+        } else {
+          setState(() {
+            userName = 'Ошибка: ${response.reasonPhrase}';
+            isLoading = false;
+          });
+        }
+      } catch (e) {
+        print('Ошибка при получении имени пользователя: $e');
         setState(() {
-          userName = data['username'];
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          userName = 'Error: ${response.reasonPhrase}';
+          userName = 'Ошибка при соединении с сервером';
           isLoading = false;
         });
       }
@@ -58,7 +77,7 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
       builder: (context) {
         String newNickname = '';
         return Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(0.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -70,7 +89,7 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
               ),
               ElevatedButton(
                 onPressed: () {
-                  // TODO: Handle nickname change action here
+                  // TODO: Реализовать изменение никнейма
                   Navigator.of(context).pop();
                 },
                 child: Text('Сохранить'),
@@ -84,70 +103,101 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
 
   @override
   Widget build(BuildContext context) {
+    print('Building widget, isLoading: $isLoading'); // Отладочное сообщение
     return isLoading
         ? const Center(child: CircularProgressIndicator())
-        : Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // User Photo with Blue Plus Icon
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      // TODO: Implement photo change functionality
-                    },
-                    child: CircleAvatar(
-                      radius: 60,
-                      backgroundImage: AssetImage('icons/user.png'),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: GestureDetector(
+        : SingleChildScrollView(
+            // Добавлено для предотвращения переполнения
+            child: Column(
+              mainAxisAlignment:
+                  MainAxisAlignment.start, // Выравнивание по верхнему краю
+              children: [
+                SizedBox(height: 16), // Отступ сверху
+                // Фотография пользователя с иконкой плюса
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    GestureDetector(
                       onTap: () {
-                        // TODO: Implement photo change functionality
+                        // TODO: Реализовать изменение фотографии
                       },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.blue,
-                        ),
-                        padding: EdgeInsets.all(4),
-                        child: Icon(
-                          Icons.add,
-                          color: Colors.white,
-                          size: 20,
+                      child: ClipOval(
+                        child: Image.network(
+                          imageUrl ?? '', // Используем сформированный URL
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
+                          errorBuilder: (BuildContext context, Object exception,
+                              StackTrace? stackTrace) {
+                            print('Error loading image: $exception');
+                            // Если ошибка, показываем изображение по умолчанию
+                            return Image.network(
+                              'https://dcf2-176-59-162-63.ngrok-free.app/img/userpic/no.png',
+                              width: 120,
+                              height: 120,
+                              fit: BoxFit.cover,
+                            );
+                          },
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 16),
-              // Username
-              Text(
-                userName ?? 'Unknown User',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: () {
+                          // TODO: Реализовать изменение фотографии
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.blue,
+                          ),
+                          padding: EdgeInsets.all(4),
+                          child: Icon(
+                            Icons.add,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              SizedBox(height: 8),
-              // Change Nickname Text
-              GestureDetector(
-                onTap: _showNicknameInput,
-                child: Text(
-                  'Изменить никнейм',
+                SizedBox(height: 16),
+                // Имя пользователя
+                Text(
+                  userName ?? 'Неизвестный пользователь',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue,
-                    fontSize: 16,
+                    fontSize: 18,
                   ),
                 ),
-              ),
-            ],
+                SizedBox(height: 8),
+                // Текст "Изменить никнейм"
+                GestureDetector(
+                  onTap: _showNicknameInput,
+                  child: Text(
+                    'Изменить никнейм',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           );
+  }
+}
+
+// Класс для игнорирования ошибок сертификата SSL
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
   }
 }

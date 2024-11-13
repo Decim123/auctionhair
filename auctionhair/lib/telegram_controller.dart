@@ -48,4 +48,9 @@ class TelegramController extends GetxController {
   static void setMainButton(String text, bool isVisible) {
     js.context.callMethod('setMainButton', [text, isVisible]);
   }
+
+  // функция для сворачивания Telegram мини-приложения
+  static void closeWebApp() {
+    js.context['Telegram']['WebApp'].callMethod('close');
+  }
 }

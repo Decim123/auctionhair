@@ -15,19 +15,41 @@ class NavBar extends StatefulWidget {
 
 class _NavBarState extends State<NavBar> {
   int _selectedIndex = 0;
-
-  final List<Widget> _screens = const [
-    TradesScreen(),
-    MyLotsScreen(),
-    ChatsScreen(),
-    WalletScreen(),
-    ProfileScreen(),
-  ];
+  int profileInitialOption = 1; // Добавлено: для хранения initialOption
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+      // Сбрасываем profileInitialOption при переключении на другой экран
+      if (index != 4) {
+        profileInitialOption = 1;
+      }
     });
+  }
+
+  // Обновляем метод для построения текущего экрана
+  Widget _buildCurrentScreen() {
+    switch (_selectedIndex) {
+      case 0:
+        return TradesScreen();
+      case 1:
+        return MyLotsScreen(
+          onProceedVerification: () {
+            setState(() {
+              _selectedIndex = 4; // Переключаемся на ProfileScreen
+              profileInitialOption = 5; // Устанавливаем опцию 5
+            });
+          },
+        );
+      case 2:
+        return ChatsScreen();
+      case 3:
+        return WalletScreen();
+      case 4:
+        return ProfileScreen(initialOption: profileInitialOption);
+      default:
+        return TradesScreen();
+    }
   }
 
   Widget _buildIcon(String activeIconPath, String inactiveIconPath, int index) {
@@ -41,7 +63,7 @@ class _NavBarState extends State<NavBar> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_selectedIndex],
+      body: _buildCurrentScreen(),
       bottomNavigationBar: SizedBox(
         height: 80,
         child: BottomNavigationBar(

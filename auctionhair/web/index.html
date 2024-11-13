@@ -12,6 +12,13 @@
 
   <!-- Добавляем JavaScript-функции для взаимодействия с Telegram WebApp -->
   <script>
+
+    window.Telegram.WebApp.ready();
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.setHeaderColor("#FFFFFF");
+    tg.expand();
+
     function initTelegramWebApp() {
       if (window.Telegram) {
         Telegram.WebApp.ready();

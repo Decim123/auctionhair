@@ -7,9 +7,9 @@ import aiohttp  # Импортируем aiohttp для HTTP-запросов
 
 router = Router()
 user_states = {}
-url = 'https://eb2d-176-59-162-192.ngrok-free.app'
+url = 'https://5c63-81-25-62-112.ngrok-free.app'
 
-API_URL = 'https://fc87-176-59-162-192.ngrok-free.app/tg_start'
+API_URL = 'https://dcf2-176-59-162-63.ngrok-free.app/tg_start'
 
 @router.message(CommandStart())
 async def start_command(message: Message, bot: Bot):
@@ -74,3 +74,4 @@ async def process_admin_command(message: Message):
 async def process_user_message(message: Message, bot: Bot):
     tg_id = message.from_user.id
     await message.answer('?')
+
