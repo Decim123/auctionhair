@@ -1,0 +1,46 @@
+{% extends "auth/base.html" %}
+
+{% block title %}Авторизация{% endblock %}
+
+{% block content %}
+    <h2>Вы получили доступ к панели администратора</h2>
+    <h3>установите логин и пароль</h3>
+    {% if error_message %}
+        <p style="color: red;">{{ error_message }}</p>
+    {% endif %}
+
+    <form action="/admin/create_lp" method="post" id="authForm">
+        <label for="username">Логин:</label>
+        <input type="text" id="login" name="login" required><br><br>
+    
+        <label for="password">Пароль:</label>
+        <input type="password" id="password" name="password" required><br><br>
+    
+        <label for="confirm_password">Повторите пароль:</label>
+        <input type="password" id="confirm_password" name="confirm_password" required><br><br>
+    
+        <input type="hidden" name="tg_id" value="{{ tg_id }}">
+    
+        <button type="submit" id="submitBtn" disabled>Войти</button>
+    </form>    
+
+    <script>
+        // элементы формы
+        const password = document.getElementById('password');
+        const confirmPassword = document.getElementById('confirm_password');
+        const submitButton = document.getElementById('submitBtn');
+
+        // Функция для проверки совпадения паролей
+        function checkPasswordsMatch() {
+            if (password.value === confirmPassword.value) {
+                submitButton.disabled = false;  // Разблокировать кнопку, если пароли совпадают
+            } else {
+                submitButton.disabled = true;  // Блокировать кнопку, если пароли не совпадают
+            }
+        }
+
+        // Добавляем обработчики событий на изменения в полях паролей
+        password.addEventListener('input', checkPasswordsMatch);
+        confirmPassword.addEventListener('input', checkPasswordsMatch);
+    </script>
+{% endblock %}

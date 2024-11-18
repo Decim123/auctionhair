@@ -62,5 +62,46 @@
       });
     });
   </script>
+
+<script>
+  let videoElement = null;
+  let canvasElement = null;
+  let context = null;
+  let stream = null;
+
+  function openCamera() {
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(function(mediaStream) {
+        stream = mediaStream;
+
+        videoElement = document.getElementById('videoElement');
+        if (videoElement) {
+          videoElement.srcObject = stream;
+          videoElement.play();
+        }
+
+        canvasElement = document.createElement('canvas');
+        context = canvasElement.getContext('2d');
+      })
+      .catch(function(err) {
+        console.error('Ошибка доступа к камере:', err);
+        alert('Ошибка доступа к камере');
+      });
+  }
+
+  function takePhoto() {
+    if (videoElement && context) {
+      canvasElement.width = videoElement.videoWidth;
+      canvasElement.height = videoElement.videoHeight;
+      context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+
+      const dataUrl = canvasElement.toDataURL('image/png');
+      console.log('Фото захвачено:', dataUrl);
+      alert('Фото сделано!');
+    }
+  }
+</script>
+
+
 </body>
 </html>

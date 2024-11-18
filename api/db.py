@@ -7,59 +7,6 @@ import os
 
 DB_PATH = os.path.join(os.path.dirname(__file__), '../database/db.sqlite')
 
-async def create_db():
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute('''
-                CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY,
-                tg_id INTEGER UNIQUE,
-                username TEXT,
-                full_name TEXT,
-                first_name TEXT,
-                last_name TEXT,
-                premium BOOLEAN,
-                lang TEXT,
-                phone TEXT,
-                email TEXT,
-                rating INTEGER DEFAULT 100,
-                rating_all TEXT,
-                city TEXT DEFAULT 'Не указан',
-                tarif TEXT DEFAULT 'Стандарт',
-                verify BOOLEAN DEFAULT FALSE,
-                notify_message BOOLEAN,
-                notify_recomendation BOOLEAN,
-                notify_sale BOOLEAN,
-                notify_trade_status BOOLEAN,
-                verify_date TEXT,
-                lots_created INTEGER,
-                lots_created_up INTEGER,
-                lots_created_down INTEGER,
-                lots_created_requested INTEGER,
-                lots_rejected INTEGER,
-                lots_rejected_up INTEGER,
-                lots_rejected_down INTEGER,
-                lots_rejected_requested INTEGER,
-                lots_sold INTEGER,
-                lots_sold_up INTEGER,
-                lots_sold_down INTEGER,
-                lots_sold_requested INTEGER,
-                lots_in INTEGER,
-                lots_in_up INTEGER,
-                lots_in_down INTEGER,
-                lots_in_requested INTEGER,
-                lots_fail INTEGER,
-                lots_fail_up INTEGER,
-                lots_fail_down INTEGER,
-                lots_fail_requested INTEGER,
-                lots_argue INTEGER,
-                lots_argue_win INTEGER,
-                lots_argue_lose INTEGER,
-                reg_date TEXT
-            )
-        ''')
-        await db.commit()
-        print("Таблица users успешно создана.")
-
 # OUTPUT
 
 async def user_exists(tg_id):
@@ -108,8 +55,58 @@ async def info(tg_id, fields):
                 return data
             else:
                 return None
-            
+
+async def check_key_exists(key: str) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute('SELECT 1 FROM keys WHERE key = ?', (key,))
+        result = await cursor.fetchone()
+        return 1 if result else 0
+
+
+async def get_access_level(key: str) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute('SELECT access_level FROM keys WHERE key = ?', (key,))
+        result = await cursor.fetchone()
+
+        if result:
+            access_level = result[0]
+            await db.execute('DELETE FROM keys WHERE key = ?', (key,))
+            await db.commit()
+            return access_level
+        else:
+            return -1
+
+async def check_worker_exists(tg_id: int) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT COUNT(*) FROM workers WHERE tg_id = ?', (tg_id,)) as cursor:
+            result = await cursor.fetchone()
+            return 1 if result[0] > 0 else 0
+
 # INPUT
+
+async def add_verify_record(tg_id: str, name_1: str, name_2: str, name_3: str):
+
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+
+    async with aiosqlite.connect(DB_PATH) as conn:
+        cursor = await conn.cursor()
+
+        try:
+            await cursor.execute('''
+                INSERT INTO verify (tg_id, name_1, name_2, name_3, date, status)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (tg_id, name_1, name_2, name_3, now, 'wait'))
+
+            await cursor.execute('''
+                UPDATE users
+                SET verify = 2
+                WHERE tg_id = ?
+            ''', (tg_id,))
+
+            await conn.commit()
+
+        except aiosqlite.Error as e:
+            print(f"Error: {e}")
 
 async def insert_user(tg_id, username, full_name, first_name, last_name, premium, lang):
     reg_date = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
@@ -126,4 +123,43 @@ async def insert_user(tg_id, username, full_name, first_name, last_name, premium
         await db.commit()
         print(f"Пользователь {full_name} добавлен.")
 
+async def add_worker_if_not_exists(tg_id, username, full_name, access_level):
+    async with aiosqlite.connect(DB_PATH) as db:
+
+        cursor = await db.execute('SELECT 1 FROM workers WHERE tg_id = ?', (tg_id,))
+        existing_user = await cursor.fetchone()
+
+        if not existing_user:
+            await db.execute('''
+                INSERT INTO workers (tg_id, username, full_name, access_level)
+                VALUES (?, ?, ?, ?)
+            ''', (tg_id, username, full_name, access_level))
+            await db.commit()
+
+async def update_worker_login_password(tg_id: int, login: str, password: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('''
+            UPDATE workers
+            SET login = ?, password = ?
+            WHERE tg_id = ?
+        ''', (login, password, tg_id))
+        await db.commit()
+
+async def get_worker_by_login(login: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute('SELECT * FROM workers WHERE login = ?', (login,))
+        worker = await cursor.fetchone()
+        
+        if worker:
+            return {
+                "id": worker[0],
+                "tg_id": worker[1],
+                "username": worker[2],
+                "full_name": worker[3],
+                "access_level": worker[4],
+                "status": worker[5],
+                "login": worker[6],
+                "password": worker[7]
+            }
+        return None
 

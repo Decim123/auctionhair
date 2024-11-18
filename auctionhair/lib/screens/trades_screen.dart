@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/header.dart';
+import '../widgets/camera.dart';
 
 class TradesScreen extends StatelessWidget {
   const TradesScreen({Key? key}) : super(key: key);
@@ -16,6 +17,9 @@ class TradesScreen extends StatelessWidget {
               child: Text('Торги'),
             ),
           ),
+          const SizedBox(height: 20),
+          // Кнопка для открытия камеры
+          const CameraButton(),
         ],
       ),
     );

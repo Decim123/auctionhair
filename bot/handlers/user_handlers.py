@@ -3,13 +3,10 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from services.services import *
 from keyboards.keyboard import *
-import aiohttp  # Импортируем aiohttp для HTTP-запросов
+import aiohttp
 
 router = Router()
 user_states = {}
-url = 'https://5c63-81-25-62-112.ngrok-free.app'
-
-API_URL = 'https://dcf2-176-59-162-63.ngrok-free.app/tg_start'
 
 @router.message(CommandStart())
 async def start_command(message: Message, bot: Bot):
@@ -31,7 +28,7 @@ async def start_command(message: Message, bot: Bot):
         'is_premium': message.from_user.is_premium,
         'language_code': message.from_user.language_code,
     }
-
+    API_URL = f'{api_url}tg_start'
     async with aiohttp.ClientSession() as session:
         async with session.post(API_URL, json=user_data) as resp:
             if resp.status == 200:
@@ -53,7 +50,7 @@ Language Code: {message.from_user.language_code}
 
     inline_kb = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Auction", web_app=types.WebAppInfo(url=url))
+            InlineKeyboardButton(text="Auction", web_app=types.WebAppInfo(url=app_url))
         ]
     ])  
 
@@ -73,5 +70,15 @@ async def process_admin_command(message: Message):
 @router.message()
 async def process_user_message(message: Message, bot: Bot):
     tg_id = message.from_user.id
-    await message.answer('?')
+    if await check_key_via_api(message.text) == 1:
+        username = message.from_user.username
+        full_name = message.from_user.full_name
+        key = message.text
+        try:
+            await add_worker_via_api(tg_id, username, full_name, key)
+            await message.answer('доступ получен\nустановите логин и пароль', reply_markup=admin_auth_kb(tg_id))
+        except:
+            await message.answer('ошибка')
+    else:
+        await message.answer('?')
 

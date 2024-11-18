@@ -4,7 +4,7 @@ import asyncio
 async def create_db():
     async with aiosqlite.connect('db.sqlite') as db:
         await db.execute('''
-                CREATE TABLE IF NOT EXISTS users (
+            CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY,
                 tg_id INTEGER UNIQUE,
                 username TEXT,
@@ -19,7 +19,7 @@ async def create_db():
                 rating_all TEXT,
                 city TEXT DEFAULT 'Не указан',
                 tarif TEXT DEFAULT 'Стандарт',
-                verify BOOLEAN DEFAULT FALSE,
+                verify INTEGER DEFAULT 0,
                 notify_message BOOLEAN,
                 notify_recomendation BOOLEAN,
                 notify_sale BOOLEAN,
@@ -51,29 +51,49 @@ async def create_db():
                 reg_date TEXT
             )
         ''')
-        await db.commit()
-        print("Таблица users успешно создана.")
-
-async def insert_user(tg_id, full_name):
-    async with aiosqlite.connect('db.sqlite') as db:
+        
         await db.execute('''
-            INSERT INTO users (tg_id, full_name) 
-            VALUES (?, ?)
-        ''', (tg_id, full_name))
-        await db.commit()
-        print(f"Пользователь {full_name} добавлен.")
+            CREATE TABLE IF NOT EXISTS verify (
+                id INTEGER PRIMARY KEY,
+                tg_id INTEGER,
+                name_1 TEXT,
+                name_2 TEXT,
+                name_3 TEXT,
+                date TEXT,
+                status TEXT DEFAULT 'wait'
+            )
+        ''')
 
-async def get_users():
-    async with aiosqlite.connect('db.sqlite') as db:
-        async with db.execute('SELECT * FROM users') as cursor:
-            users = await cursor.fetchall()
-            for user in users:
-                print(user)
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS workers (
+                id INTEGER PRIMARY KEY,
+                tg_id INTEGER UNIQUE,
+                username TEXT,
+                full_name TEXT,
+                access_level INTEGER,
+                status TEXT DEFAULT 'active',
+                login TEXT UNIQUE,
+                password TEXT
+            )
+        ''')
 
-# Асинхронный запуск функций
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS keys (
+                id INTEGER PRIMARY KEY,
+                key TEXT UNIQUE,
+                access_level INTEGER
+            )
+        ''')
+
+        # Вставка ключа '123' с access_level = 3
+        #await db.execute('''
+        #    INSERT OR IGNORE INTO keys (key, access_level)
+        #    VALUES ('123', 3)
+        #''')
+
+        #await db.commit()
+
 async def main():
     await create_db()
-#    await insert_user(123456789, "Иван Иванов")
-#    await get_users()
 
 asyncio.run(main())

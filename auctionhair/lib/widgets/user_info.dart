@@ -35,7 +35,7 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
     if (userId != null) {
       try {
         var response = await http.post(
-          Uri.parse('https://dcf2-176-59-162-63.ngrok-free.app/user_info'),
+          Uri.parse('https://1149-91-188-188-116.ngrok-free.app/api/user_info'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'tg_id': userId, 'function': 'username'}),
         );
@@ -46,7 +46,7 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
             userName = data['username'];
             // Формируем URL изображения, используем http вместо https
             imageUrl =
-                'https://dcf2-176-59-162-63.ngrok-free.app/img/userpic/${userId}.jpg';
+                'https://1149-91-188-188-116.ngrok-free.app/api/img/userpic/${userId}.jpg';
             isLoading = false;
             print(imageUrl);
           });
@@ -132,7 +132,7 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
                             print('Error loading image: $exception');
                             // Если ошибка, показываем изображение по умолчанию
                             return Image.network(
-                              'https://dcf2-176-59-162-63.ngrok-free.app/img/userpic/no.png',
+                              'https://1149-91-188-188-116.ngrok-free.app/api/img/userpic/no.png',
                               width: 120,
                               height: 120,
                               fit: BoxFit.cover,

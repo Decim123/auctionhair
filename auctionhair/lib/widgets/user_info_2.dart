@@ -20,7 +20,7 @@ class _UserInfo2WidgetState extends State<UserInfo2Widget> {
   int rating = 0;
   String city = '';
   String tarif = '';
-  bool verification = false;
+  int verifyStatus = 0; // Поле для статуса верификации (0, 1, 2)
 
   @override
   void initState() {
@@ -35,7 +35,7 @@ class _UserInfo2WidgetState extends State<UserInfo2Widget> {
     if (userId != null) {
       try {
         var response = await http.post(
-          Uri.parse('https://dcf2-176-59-162-63.ngrok-free.app/info'),
+          Uri.parse('https://1149-91-188-188-116.ngrok-free.app/api/info'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'tg_id': userId,
@@ -50,7 +50,7 @@ class _UserInfo2WidgetState extends State<UserInfo2Widget> {
             rating = data['rating'] ?? 0;
             city = data['city'] ?? '';
             tarif = data['tarif'] ?? '';
-            verification = data['verify'] == 1 || data['verify'] == true;
+            verifyStatus = data['verify'] ?? 0; // Обновляем статус верификации
             isLoading = false;
           });
         } else {
@@ -88,6 +88,32 @@ class _UserInfo2WidgetState extends State<UserInfo2Widget> {
           return Icon(Icons.star_border, color: Colors.blue);
         }
       }),
+    );
+  }
+
+  // Виджет для отображения строки с верификацией
+  Widget buildVerificationStatus(int verifyStatus) {
+    String statusText;
+    Color statusColor;
+
+    if (verifyStatus == 0) {
+      statusText = 'Не пройдена';
+      statusColor = Colors.red;
+    } else if (verifyStatus == 1) {
+      statusText = 'Пройдена';
+      statusColor = Colors.green;
+    } else {
+      statusText = 'Проверка';
+      statusColor = Colors.orange;
+    }
+
+    return Text(
+      statusText,
+      style: TextStyle(
+        color: statusColor,
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+      ),
     );
   }
 
@@ -200,19 +226,12 @@ class _UserInfo2WidgetState extends State<UserInfo2Widget> {
                 // Верификация с возможностью нажатия
                 buildInfoRow(
                   'Верификация',
-                  Text(
-                    verification ? 'Пройдена' : 'Не пройдена',
-                    style: TextStyle(
-                      color: verification ? Colors.green : Colors.red,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  onTap: verification
-                      ? null
-                      : () {
+                  buildVerificationStatus(verifyStatus),
+                  onTap: verifyStatus == 0
+                      ? () {
                           widget.onOptionSelected(5); // Переходим к опции 5
-                        },
+                        }
+                      : null,
                 ),
                 SizedBox(height: 20), // Отступ перед надписями
 

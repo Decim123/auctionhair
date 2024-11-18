@@ -1,0 +1,51 @@
+{% extends "auth/base.html" %}
+
+{% block title %}Авторизация{% endblock %}
+
+{% block content %}
+    {% if error_message %}
+        <p style="color: red;">{{ error_message }}</p>
+    {% endif %}
+
+    <form id="loginForm">
+        <label for="login">Логин</label>
+        <input type="text" id="login" name="login" required><br><br>
+        
+        <label for="password">Пароль</label>
+        <input type="password" id="password" name="password" required><br><br>
+        
+        <button type="submit" id="submitBtn">Войти</button>
+    </form>
+    <div class='change_auth'>
+        <a href='#'>Забыли пароль?</a>
+        <a href='#'>Забыли логин?</a>
+    </div>
+    
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const login = document.getElementById('login').value;
+            const password = document.getElementById('password').value;
+    
+            try {
+                const response = await fetch('/admin/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({ login, password })
+                });
+    
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    alert('Ошибка авторизации');
+                }
+            } catch (error) {
+                console.error('Ошибка при отправке запроса:', error);
+                alert('Ошибка подключения к серверу');
+            }
+        });
+    </script>
+    
+{% endblock %}

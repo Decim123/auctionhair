@@ -4,9 +4,11 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../widgets/header.dart';
 import '../telegram_controller.dart';
+import '../widgets/lots.dart';
+import '../widgets/lots_verify.dart';
 
 class MyLotsScreen extends StatefulWidget {
-  final VoidCallback onProceedVerification; // Добавлено
+  final VoidCallback onProceedVerification;
 
   const MyLotsScreen({Key? key, required this.onProceedVerification})
       : super(key: key);
@@ -17,7 +19,7 @@ class MyLotsScreen extends StatefulWidget {
 
 class _MyLotsScreenState extends State<MyLotsScreen> {
   bool isLoading = true;
-  bool isVerified = false;
+  String verificationMessage = ''; // Для хранения сообщения о верификации
   int? userId;
 
   @override
@@ -33,7 +35,7 @@ class _MyLotsScreenState extends State<MyLotsScreen> {
     if (userId != null) {
       try {
         var response = await http.post(
-          Uri.parse('https://dcf2-176-59-162-63.ngrok-free.app/info'),
+          Uri.parse('https://1149-91-188-188-116.ngrok-free.app/api/info'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'tg_id': userId,
@@ -44,8 +46,14 @@ class _MyLotsScreenState extends State<MyLotsScreen> {
         if (response.statusCode == 200) {
           var data = jsonDecode(utf8.decode(response.bodyBytes));
           setState(() {
-            // Предполагаем, что verify возвращается как 0 или 1
-            isVerified = data['verify'] == 1 || data['verify'] == true;
+            if (data['verify'] == 1 || data['verify'] == true) {
+              verificationMessage = 'Верификация пройдена';
+            } else if (data['verify'] == 0) {
+              verificationMessage =
+                  'Необходимо пройти верификацию для размещения лотов';
+            } else if (data['verify'] == 2) {
+              verificationMessage = 'Ваши данные проверяются';
+            }
             isLoading = false;
           });
         } else {
@@ -79,27 +87,12 @@ class _MyLotsScreenState extends State<MyLotsScreen> {
                 const Header(text: 'Мои лоты'),
                 Expanded(
                   child: Center(
-                    child: isVerified
-                        ? const Text(
-                            'Верификация пройдена',
-                            style: TextStyle(fontSize: 18),
-                          )
-                        : Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text(
-                                'Необходимо пройти верификацию для размещения лотов',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 18),
-                              ),
-                              const SizedBox(height: 20),
-                              ElevatedButton(
-                                onPressed:
-                                    widget.onProceedVerification, // Изменено
-                                child: const Text('Пройти'),
-                              ),
-                            ],
-                          ),
+                    child: verificationMessage == 'Верификация пройдена'
+                        ? const Lots() // Отображаем виджет Lots, если верификация прошла
+                        : LotsVerify(
+                            verificationMessage: verificationMessage,
+                            onProceedVerification: widget.onProceedVerification,
+                          ), // Иначе отображаем LotsVerify с соответствующим сообщением
                   ),
                 ),
               ],
