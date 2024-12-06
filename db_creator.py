@@ -48,7 +48,8 @@ async def create_db():
                 lots_argue INTEGER,
                 lots_argue_win INTEGER,
                 lots_argue_lose INTEGER,
-                reg_date TEXT
+                reg_date TEXT,
+                liked_lots TEXT DEFAULT 0
             )
         ''')
         
@@ -85,13 +86,83 @@ async def create_db():
             )
         ''')
 
-        # Вставка ключа '123' с access_level = 3
-        #await db.execute('''
-        #    INSERT OR IGNORE INTO keys (key, access_level)
-        #    VALUES ('123', 3)
-        #''')
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS wallet_rub (
+                id INTEGER PRIMARY KEY,
+                tg_id INTEGER UNIQUE,
+                ballance REAL DEFAULT 0,
+                frozen REAL DEFAULT 0
+            )
+        ''')
 
-        #await db.commit()
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS wallet_history (
+                id INTEGER PRIMARY KEY,
+                tg_id INTEGER,
+                action TEXT,
+                description TEXT,
+                status TEXT
+            )
+        ''')
+
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS frozen_history (
+                id INTEGER PRIMARY KEY,
+                tg_id INTEGER,
+                action TEXT,
+                description TEXT,
+                status TEXT
+            )
+        ''')
+
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS lots (
+                id INTEGER PRIMARY KEY,
+                tg_id INTEGER,
+                lot_type TEXT,
+                long INTEGER,
+                natural_color TEXT,
+                now_color TEXT,
+                type TEXT,
+                age INTEGER,
+                weight INTEGER,
+                description TEXT,
+                price INTEGER,
+                period INTEGER,
+                step INTEGER,
+                views INTEGER DEFAULT 0,
+                status INTEGER DEFAULT 0,
+                high_price INTEGER DEFAULT 0
+            )
+        ''')
+
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS lots_without_img (
+                id INTEGER PRIMARY KEY,
+                tg_id INTEGER,
+                lot_type TEXT,
+                long INTEGER,
+                natural_color TEXT,
+                now_color TEXT,
+                type TEXT,
+                age INTEGER,
+                weight INTEGER,
+                description TEXT,
+                price INTEGER,
+                period INTEGER,
+                step INTEGER,
+                views INTEGER DEFAULT 0,
+                status INTEGER DEFAULT 0,
+                high_price INTEGER DEFAULT 0
+            )
+        ''')
+        # Вставка ключа '123' с access_level = 3
+        await db.execute('''
+            INSERT OR IGNORE INTO keys (key, access_level)
+            VALUES ('123', 3)
+        ''')
+
+        await db.commit()
 
 async def main():
     await create_db()

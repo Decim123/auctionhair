@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, Form, Depends, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 import jwt
@@ -9,6 +9,7 @@ from admin.models import *
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from fastapi import Cookie
+import bcrypt
 
 admin_router = APIRouter()
 
@@ -16,11 +17,31 @@ templates = Jinja2Templates(directory="admin/templates")
 
 SECRET_KEY = "123123m&m's"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 12 * 60
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+async def get_access(access_token):
+    try:
+        payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+
+        if not username:
+            raise HTTPException(status_code=403, detail="Invalid token")
+
+        worker = await get_worker_by_login(username)
+        if not worker:
+            raise HTTPException(status_code=403, detail="Пользователь не найден")
+
+        return worker
+
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=303, headers={"Location": "/admin/login"})
+
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)):
     to_encode = data.copy()
@@ -73,7 +94,7 @@ async def create_lp(
 async def login_form(request: Request):
     return templates.TemplateResponse("auth/login.html", {"request": request})
 
-@admin_router.post("/login", response_model=TokenResponse)
+@admin_router.post("/login")
 async def login(
     request: Request,
     login: str = Form(...),
@@ -92,30 +113,66 @@ async def login(
 @admin_router.get("/main", response_class=HTMLResponse)
 async def main(request: Request, access_token: str = Cookie(None)):
     if not access_token:
-        raise HTTPException(status_code=401, detail="Токен отсутствует")
+        raise HTTPException(status_code=303, headers={"Location": "/admin/login"})
 
-    try:
-        payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-
-        if not username:
-            raise HTTPException(status_code=403, detail="Invalid token")
-
-        worker = await get_worker_by_login(username)
-        if not worker:
-            raise HTTPException(status_code=403, detail="Пользователь не найден")
-
-        return templates.TemplateResponse("main/main.html", {"request": request, "user": worker})
-
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token has expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-
+    worker = await get_access(access_token)
+    return templates.TemplateResponse("main/main.html", {"request": request, "user": worker})
 
 @admin_router.get("/logout")
 async def logout(request: Request):
     response = RedirectResponse(url="/admin/login")
     response.delete_cookie("access_token")
     return response
+
+@admin_router.get("/stuff", response_class=HTMLResponse)
+async def read_stuff(request: Request, access_token: str = Cookie(None)):
+    if not access_token:
+        raise HTTPException(status_code=303, headers={"Location": "/admin/login"})
+
+    worker = await get_access(access_token)
+    workers = await get_workers()
+    return templates.TemplateResponse("main/stuff.html", {"request": request, "user": worker, "workers": workers})
+
+@admin_router.post("/key_gen")
+async def key_gen(request: Request, access_token: str = Cookie(None)):
+    if not access_token:
+        raise HTTPException(status_code=303, headers={"Location": "/admin/login"})
+    worker = await get_access(access_token)
+
+    data = await request.json()
+    access_level = data.get('access_level')
+
+    if access_level is None:
+        raise HTTPException(status_code=400, detail="Уровень доступа не указан")
+
+    key = await generate_key(int(access_level))
+    return {"key": key}
+
+@admin_router.get("/verify", response_class=HTMLResponse)
+async def read_stuff(request: Request, access_token: str = Cookie(None)):
+    if not access_token:
+        raise HTTPException(status_code=303, headers={"Location": "/admin/login"})
+
+    worker = await get_access(access_token)
+    verify = await get_verify()
+    return templates.TemplateResponse("main/verify.html", {"request": request, "user": worker, "verify": verify})
+
+@admin_router.get("/user_images/{filename}")
+async def user_images(filename: str):
+    # Проверка безопасности имени файла
+    if '..' in filename or filename.startswith('/'):
+        raise HTTPException(status_code=404)
+    file_path =  f'../database/img/userpic/verify/{filename}'
+    print(file_path)
+    if os.path.exists(file_path):
+        return FileResponse(path=file_path, media_type='image/png')
+    else:
+        raise HTTPException(status_code=404)
+    
+@admin_router.post("/verify_check")
+async def verify_check(request: Request):
+    data = await request.json()
+    tg_id = data.get('tg_id')
+    status = data.get('status')
+    await update_verification(tg_id, status)
+    return {"success": True, "message": f"Пользователь {tg_id} обработан со статусом {status}"}

@@ -1,0 +1,56 @@
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', path='css/main/stuff_verify.css') }}">
+{% endblock %}
+
+{% block content %}
+    <h2>Сотрудники</h2>
+    <button id="openModalBtn">Создать ключ</button>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Telegram ID</th>
+                    <th>Username</th>
+                    <th>Полное имя</th>
+                    <th>Уровень доступа</th>
+                    <th>Статус</th>
+                    <th>Логин</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for worker in workers %}
+                <tr>
+                    <td>{{ worker.id }}</td>
+                    <td>{{ worker.tg_id }}</td>
+                    <td>{{ worker.username }}</td>
+                    <td>{{ worker.full_name }}</td>
+                    <td>{{ worker.access_level }}</td>
+                    <td>{{ worker.status }}</td>
+                    <td>{{ worker.login }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <!-- Модальное окно -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span id="closeModalBtn" class="close">&times;</span>
+            <h3>Уровень доступа</h3>
+            <div class="combined-control">
+                <select id="accessLevel">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                </select>
+                <button id="generateKeyBtn">Создать ключ</button>
+            </div>
+            <div id="keyContainer" style="display: none;">
+                <p>Ключ: <span id="generatedKey"></span></p>
+                <button id="copyKeyBtn">Копировать</button>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

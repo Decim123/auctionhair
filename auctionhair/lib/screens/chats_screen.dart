@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/header.dart';
+import '../widgets/attach_files_widget.dart'; // Импортируйте виджет
 
 class ChatsScreen extends StatelessWidget {
   const ChatsScreen({Key? key}) : super(key: key);
@@ -12,10 +13,8 @@ class ChatsScreen extends StatelessWidget {
       body: Column(
         children: [
           const Header(text: 'Чаты'),
-          const Expanded(
-            child: Center(
-              child: Text('Чаты'),
-            ),
+          Expanded(
+            child: AttachFilesWidget(), // Используем виджет здесь
           ),
         ],
       ),

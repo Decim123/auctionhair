@@ -1,9 +1,13 @@
+// camera_screen.dart
+
 import 'dart:html' as html;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 class CameraScreen extends StatefulWidget {
-  const CameraScreen({Key? key}) : super(key: key);
+  final String name;
+
+  const CameraScreen({Key? key, required this.name}) : super(key: key);
 
   @override
   _CameraScreenState createState() => _CameraScreenState();
@@ -13,6 +17,9 @@ class _CameraScreenState extends State<CameraScreen> {
   late html.VideoElement videoElement;
   html.MediaStream? cameraStream;
   String debugMessage = 'Инициализация...';
+  bool isPreviewing = false;
+  html.CanvasElement? canvasElement;
+  String? capturedImageDataUrl;
 
   @override
   void initState() {
@@ -37,7 +44,6 @@ class _CameraScreenState extends State<CameraScreen> {
     });
 
     try {
-      // Запрашиваем доступ к задней камере
       cameraStream = await html.window.navigator.mediaDevices?.getUserMedia({
         'video': {
           'facingMode': {'exact': 'environment'}
@@ -75,6 +81,27 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
+  void _capturePhoto() {
+    canvasElement = html.CanvasElement(
+        width: videoElement.videoWidth, height: videoElement.videoHeight);
+    canvasElement!.context2D.drawImage(videoElement, 0, 0);
+    capturedImageDataUrl = canvasElement!.toDataUrl('image/png');
+    setState(() {
+      isPreviewing = true;
+    });
+  }
+
+  void _retakePhoto() {
+    setState(() {
+      isPreviewing = false;
+      capturedImageDataUrl = null;
+    });
+  }
+
+  void _acceptPhoto() {
+    Navigator.pop(context, capturedImageDataUrl);
+  }
+
   void _stopCamera() {
     if (cameraStream != null) {
       cameraStream?.getTracks().forEach((track) => track.stop());
@@ -93,30 +120,47 @@ class _CameraScreenState extends State<CameraScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Камера'),
+        title: Text('Камера - ${widget.name}'),
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            debugMessage,
-            style: const TextStyle(color: Colors.red, fontSize: 16),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: HtmlElementView(viewType: 'videoElement'),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () {
-              _stopCamera();
-              Navigator.pop(context);
-            },
-            child: const Text('Закрыть камеру'),
-          ),
-        ],
-      ),
+      body: isPreviewing
+          ? Column(
+              children: [
+                Expanded(
+                  child: capturedImageDataUrl != null
+                      ? Image.network(capturedImageDataUrl!)
+                      : Container(),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
+                      onPressed: _retakePhoto,
+                      child: Text('Сделать другое фото'),
+                    ),
+                    ElevatedButton(
+                      onPressed: _acceptPhoto,
+                      child: Text('Сохранить фото'),
+                    ),
+                  ],
+                ),
+              ],
+            )
+          : Column(
+              children: [
+                Text(
+                  debugMessage,
+                  style: const TextStyle(color: Colors.red, fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+                Expanded(
+                  child: HtmlElementView(viewType: 'videoElement'),
+                ),
+                ElevatedButton(
+                  onPressed: _capturePhoto,
+                  child: Text('Сделать фото'),
+                ),
+              ],
+            ),
     );
   }
 }

@@ -1,10 +1,13 @@
-import 'dart:typed_data'; // Для работы с байтами
+// verify.dart
+
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import '../telegram_controller.dart';
 import 'package:http_parser/http_parser.dart';
+import '../screens/camera_screen.dart';
+import '../constants.dart';
 
 class VerifyWidget extends StatefulWidget {
   @override
@@ -17,10 +20,9 @@ class _VerifyWidgetState extends State<VerifyWidget> {
   final TextEditingController _patronymicController = TextEditingController();
 
   bool _isButtonEnabled = false;
-  XFile? _selectedImage; // Изменено на XFile
   int? _tgId;
   bool _isSubmitted = false;
-  Uint8List? _imageBytes; // Для хранения байтов изображения
+  Uint8List? _imageBytes;
 
   final TelegramController _telegramController = Get.put(TelegramController());
 
@@ -34,7 +36,6 @@ class _VerifyWidgetState extends State<VerifyWidget> {
   }
 
   void _getTelegramId() async {
-    // Ждем, пока TelegramController получит данные
     await Future.delayed(Duration(milliseconds: 500));
     setState(() {
       _tgId = _telegramController.userId;
@@ -46,21 +47,35 @@ class _VerifyWidgetState extends State<VerifyWidget> {
       _isButtonEnabled = _surnameController.text.isNotEmpty &&
           _nameController.text.isNotEmpty &&
           _patronymicController.text.isNotEmpty &&
-          _selectedImage != null;
+          _imageBytes != null;
     });
   }
 
   Future<void> _pickImage() async {
-    final ImagePicker _picker = ImagePicker();
-    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+    if (_tgId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Telegram ID не получен')),
+      );
+      return;
+    }
 
-    if (image != null) {
-      final bytes = await image.readAsBytes();
-      setState(() {
-        _selectedImage = image;
-        _imageBytes = bytes;
-      });
-      _validateForm();
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CameraScreen(name: _tgId.toString()),
+      ),
+    );
+
+    if (result != null) {
+      final uriData = Uri.parse(result as String);
+      final bytes = uriData.data?.contentAsBytes();
+
+      if (bytes != null) {
+        setState(() {
+          _imageBytes = Uint8List.fromList(bytes);
+          _validateForm();
+        });
+      }
     }
   }
 
@@ -72,7 +87,7 @@ class _VerifyWidgetState extends State<VerifyWidget> {
       return;
     }
 
-    if (_selectedImage == null) {
+    if (_imageBytes == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Изображение не выбрано')),
       );
@@ -80,8 +95,7 @@ class _VerifyWidgetState extends State<VerifyWidget> {
     }
 
     try {
-      var uri = Uri.parse(
-          'https://1149-91-188-188-116.ngrok-free.app/api/verify_try');
+      var uri = Uri.parse('${BASE_API_URL}/api/verify_try');
 
       var request = http.MultipartRequest('POST', uri)
         ..fields['tg_id'] = _tgId.toString()
@@ -89,12 +103,11 @@ class _VerifyWidgetState extends State<VerifyWidget> {
         ..fields['name_2'] = _nameController.text
         ..fields['name_3'] = _patronymicController.text;
 
-      // Добавляем файл изображения
       var multipartFile = http.MultipartFile.fromBytes(
         'image',
         _imageBytes!,
-        filename: 'verify_image.jpg',
-        contentType: MediaType('image', 'jpeg'),
+        filename: 'verify_image.png',
+        contentType: MediaType('image', 'png'),
       );
 
       request.files.add(multipartFile);
@@ -104,7 +117,6 @@ class _VerifyWidgetState extends State<VerifyWidget> {
       print('name_1: ${_surnameController.text}');
       print('name_2: ${_nameController.text}');
       print('name_3: ${_patronymicController.text}');
-      print('image name: ${_selectedImage!.name}');
 
       var streamedResponse = await request.send();
 
@@ -112,13 +124,12 @@ class _VerifyWidgetState extends State<VerifyWidget> {
 
       if (response.statusCode == 200) {
         setState(() {
-          _isSubmitted = true; // Помечаем, что данные отправлены
+          _isSubmitted = true;
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Ошибка при отправке данных')),
         );
-        // Выводим тело ответа для отладки
         print('Ошибка: ${response.statusCode}');
         print('Тело ответа: ${response.body}');
       }
@@ -177,10 +188,9 @@ class _VerifyWidgetState extends State<VerifyWidget> {
         SizedBox(height: 16),
         Row(
           children: [
-            // Фото пользователя
             Container(
-              width: blockWidth * 0.4, // 40% ширины экрана
-              height: blockWidth * 0.4, // Высота подстраивается
+              width: blockWidth * 0.4,
+              height: blockWidth * 0.4,
               decoration: BoxDecoration(
                 color: Colors.grey[300],
                 borderRadius: BorderRadius.circular(8),
@@ -202,7 +212,6 @@ class _VerifyWidgetState extends State<VerifyWidget> {
                     ),
             ),
             SizedBox(width: 16),
-            // Информация о пользователе
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -288,12 +297,12 @@ class _VerifyWidgetState extends State<VerifyWidget> {
                   onTap: _pickImage,
                   child: Container(
                     width: blockWidth,
-                    height: 200, // Увеличиваем высоту
+                    height: 200,
                     decoration: BoxDecoration(
                       color: Colors.grey[300],
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: _selectedImage != null
+                    child: _imageBytes != null
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: Image.memory(

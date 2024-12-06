@@ -15,7 +15,7 @@
 
     window.Telegram.WebApp.ready();
     const tg = window.Telegram.WebApp;
-    tg.ready();
+    tg.disableVerticalSwipes()
     tg.setHeaderColor("#FFFFFF");
     tg.expand();
 
@@ -99,6 +99,91 @@
       console.log('Фото захвачено:', dataUrl);
       alert('Фото сделано!');
     }
+  }
+</script>
+
+<script>
+  // Функция для выбора изображений
+  function selectImages() {
+    return new Promise(function(resolve, reject) {
+      var input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.multiple = true;
+
+      input.onchange = function(event) {
+        var files = input.files;
+        if (files.length > 0) {
+          var fileReaders = [];
+          var images = [];
+
+          for (var i = 0; i < files.length; i++) {
+            (function(file) {
+              var reader = new FileReader();
+              reader.onload = function(e) {
+                images.push({
+                  name: file.name,
+                  data: e.target.result
+                });
+                if (images.length === files.length) {
+                  resolve(images);
+                }
+              };
+              reader.onerror = function(e) {
+                reject(e);
+              };
+              reader.readAsDataURL(file);
+            })(files[i]);
+          }
+        } else {
+          resolve([]);
+        }
+      };
+
+      input.click();
+    });
+  }
+
+  // Функция для выбора изображений и видео
+  function selectImagesAndVideos() {
+    return new Promise(function(resolve, reject) {
+      var input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*,video/*';
+      input.multiple = true;
+
+      input.onchange = function(event) {
+        var files = input.files;
+        if (files.length > 0) {
+          var fileReaders = [];
+          var mediaFiles = [];
+
+          for (var i = 0; i < files.length; i++) {
+            (function(file) {
+              var reader = new FileReader();
+              reader.onload = function(e) {
+                mediaFiles.push({
+                  name: file.name,
+                  data: e.target.result,
+                  type: file.type
+                });
+                if (mediaFiles.length === files.length) {
+                  resolve(mediaFiles);
+                }
+              };
+              reader.onerror = function(e) {
+                reject(e);
+              };
+              reader.readAsDataURL(file);
+            })(files[i]);
+          }
+        } else {
+          resolve([]);
+        }
+      };
+
+      input.click();
+    });
   }
 </script>
 

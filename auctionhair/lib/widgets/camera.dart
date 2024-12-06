@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../screens/camera_screen.dart';
 
 class CameraButton extends StatelessWidget {
-  const CameraButton({Key? key}) : super(key: key);
+  final String userID;
+
+  const CameraButton({Key? key, required this.userID}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -10,7 +12,9 @@ class CameraButton extends StatelessWidget {
       onPressed: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const CameraScreen()),
+          MaterialPageRoute(
+            builder: (context) => CameraScreen(name: userID),
+          ),
         );
       },
       child: const Text('Открыть камеру'),

@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import '../telegram_controller.dart';
 import 'dart:convert';
+import '../constants.dart';
+import 'city_pick.dart';
 
 class UserInfo2Widget extends StatefulWidget {
   final Function(int newOption) onOptionSelected;
@@ -20,14 +22,13 @@ class _UserInfo2WidgetState extends State<UserInfo2Widget> {
   int rating = 0;
   String city = '';
   String tarif = '';
-  int verifyStatus = 0; // Поле для статуса верификации (0, 1, 2)
+  int verifyStatus = 0;
 
   @override
   void initState() {
     super.initState();
     TelegramController telegramController = Get.find<TelegramController>();
     userId = telegramController.userId;
-    print('User ID: $userId'); // Отладочное сообщение
     fetchUserInfo();
   }
 
@@ -35,7 +36,7 @@ class _UserInfo2WidgetState extends State<UserInfo2Widget> {
     if (userId != null) {
       try {
         var response = await http.post(
-          Uri.parse('https://1149-91-188-188-116.ngrok-free.app/api/info'),
+          Uri.parse('${BASE_API_URL}/api/info'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'tg_id': userId,
@@ -45,22 +46,19 @@ class _UserInfo2WidgetState extends State<UserInfo2Widget> {
 
         if (response.statusCode == 200) {
           var data = jsonDecode(utf8.decode(response.bodyBytes));
-          print('Полученные данные: $data'); // Для отладки
           setState(() {
             rating = data['rating'] ?? 0;
-            city = data['city'] ?? '';
+            city = data['city'] ?? 'Не указан';
             tarif = data['tarif'] ?? '';
-            verifyStatus = data['verify'] ?? 0; // Обновляем статус верификации
+            verifyStatus = data['verify'] ?? 0;
             isLoading = false;
           });
         } else {
           setState(() {
             isLoading = false;
           });
-          print('Ошибка при получении данных: ${response.reasonPhrase}');
         }
       } catch (e) {
-        print('Ошибка при соединении с сервером: $e');
         setState(() {
           isLoading = false;
         });
@@ -69,11 +67,36 @@ class _UserInfo2WidgetState extends State<UserInfo2Widget> {
       setState(() {
         isLoading = false;
       });
-      print('User ID not available');
     }
   }
 
-  // Функция для отображения звёздочек рейтинга
+  Future<void> sendCityPick(String selectedCity) async {
+    try {
+      var response = await http.post(
+        Uri.parse('${BASE_API_URL}/api/city_pick'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'tg_id': userId,
+          'selected_city': selectedCity,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          city = selectedCity;
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Не удалось сохранить выбор региона')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Произошла ошибка при сохранении региона')),
+      );
+    }
+  }
+
   Widget buildRatingStars(int ratingValue) {
     int fullStars = (ratingValue / 20).floor();
     double partialStar = (ratingValue % 20) / 20;
@@ -91,7 +114,6 @@ class _UserInfo2WidgetState extends State<UserInfo2Widget> {
     );
   }
 
-  // Виджет для отображения строки с верификацией
   Widget buildVerificationStatus(int verifyStatus) {
     String statusText;
     Color statusColor;
@@ -117,7 +139,6 @@ class _UserInfo2WidgetState extends State<UserInfo2Widget> {
     );
   }
 
-  // Виджет для отображения одной строки информации с опциональным onTap
   Widget buildInfoRow(String label, Widget valueWidget, {VoidCallback? onTap}) {
     Widget rowContent = Container(
       padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -165,22 +186,20 @@ class _UserInfo2WidgetState extends State<UserInfo2Widget> {
     }
   }
 
-  // Виджет для кнопки с текстом и переключением опций
   Widget buildNavigationButton(String label, int optionNumber) {
     return GestureDetector(
       onTap: () {
-        widget.onOptionSelected(
-            optionNumber); // Вызываем функцию обратного вызова
+        widget.onOptionSelected(optionNumber);
       },
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        alignment: Alignment.center, // Центрируем текст по горизонтали
+        alignment: Alignment.center,
         child: Text(
           label,
           style: TextStyle(
-            color: Colors.blue, // Синий цвет
+            color: Colors.blue,
             fontSize: 16,
-            fontWeight: FontWeight.bold, // Жирный шрифт
+            fontWeight: FontWeight.bold,
           ),
         ),
       ),
@@ -192,27 +211,47 @@ class _UserInfo2WidgetState extends State<UserInfo2Widget> {
     return isLoading
         ? Center(child: CircularProgressIndicator())
         : SingleChildScrollView(
-            // Добавляем прокрутку, если содержимое не помещается
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Рейтинг
                 buildInfoRow(
                   'Рейтинг',
                   buildRatingStars(rating),
                 ),
-                // Город
                 buildInfoRow(
                   'Город',
                   Text(
-                    city,
+                    city == 'Не указан' ? 'Выбрать' : city,
                     style: TextStyle(
-                      color: Colors.black,
+                      color: city == 'Не указан' ? Colors.red : Colors.blue,
                       fontSize: 16,
+                      decoration: city == 'Не указан'
+                          ? TextDecoration.underline
+                          : TextDecoration.none,
                     ),
                   ),
+                  onTap: () async {
+                    List<String>? selectedCity =
+                        await showModalBottomSheet<List<String>>(
+                      context: context,
+                      isScrollControlled: true,
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.vertical(top: Radius.circular(16)),
+                      ),
+                      builder: (context) => SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.6,
+                        child: CityPickWidget(
+                          selectedRegions: [],
+                        ),
+                      ),
+                    );
+
+                    if (selectedCity != null && selectedCity.isNotEmpty) {
+                      await sendCityPick(selectedCity.first);
+                    }
+                  },
                 ),
-                // Тариф
                 buildInfoRow(
                   'Тариф',
                   Text(
@@ -223,23 +262,18 @@ class _UserInfo2WidgetState extends State<UserInfo2Widget> {
                     ),
                   ),
                 ),
-                // Верификация с возможностью нажатия
                 buildInfoRow(
                   'Верификация',
                   buildVerificationStatus(verifyStatus),
                   onTap: verifyStatus == 0
                       ? () {
-                          widget.onOptionSelected(5); // Переходим к опции 5
+                          widget.onOptionSelected(5);
                         }
                       : null,
                 ),
-                SizedBox(height: 20), // Отступ перед надписями
-
-                // Надпись "Настройки"
+                SizedBox(height: 20),
                 buildNavigationButton('Настройки', 2),
-                // Надпись "Статистика"
                 buildNavigationButton('Статистика', 3),
-                // Надпись "Помощь"
                 buildNavigationButton('Помощь', 4),
               ],
             ),

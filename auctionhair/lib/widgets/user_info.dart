@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import '../telegram_controller.dart';
 import 'dart:convert';
+import '../constants.dart';
 
 class UserInfoWidget extends StatefulWidget {
   const UserInfoWidget({Key? key}) : super(key: key);
@@ -35,7 +36,7 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
     if (userId != null) {
       try {
         var response = await http.post(
-          Uri.parse('https://1149-91-188-188-116.ngrok-free.app/api/user_info'),
+          Uri.parse('${BASE_API_URL}/api/user_info'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'tg_id': userId, 'function': 'username'}),
         );
@@ -45,8 +46,7 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
           setState(() {
             userName = data['username'];
             // Формируем URL изображения, используем http вместо https
-            imageUrl =
-                'https://1149-91-188-188-116.ngrok-free.app/api/img/userpic/${userId}.jpg';
+            imageUrl = '${BASE_API_URL}/static/img/userpic/${userId}.jpg';
             isLoading = false;
             print(imageUrl);
           });
@@ -132,7 +132,7 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
                             print('Error loading image: $exception');
                             // Если ошибка, показываем изображение по умолчанию
                             return Image.network(
-                              'https://1149-91-188-188-116.ngrok-free.app/api/img/userpic/no.png',
+                              '${BASE_API_URL}/static/img/userpic/no.png',
                               width: 120,
                               height: 120,
                               fit: BoxFit.cover,
