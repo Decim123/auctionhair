@@ -20,6 +20,7 @@ class _TradesScreenState extends State<TradesScreen> {
   late int option;
   Map<String, dynamic> parameters = {};
   Map<String, dynamic>? selectedLot;
+  int? selectedId; // Добавляем переменную для хранения id для опции 4
 
   @override
   void initState() {
@@ -36,6 +37,8 @@ class _TradesScreenState extends State<TradesScreen> {
         return buildParametersOption();
       case 3:
         return buildTradeDetailOption();
+      case 4:
+        return buildOption4(); // Добавляем новую опцию
       default:
         return buildTradesOption();
     }
@@ -75,15 +78,47 @@ class _TradesScreenState extends State<TradesScreen> {
   Widget buildTradeDetailOption() {
     if (selectedLot == null) {
       return Scaffold(
-        appBar: AppBar(
-          title: Text('Детали лота'),
-        ),
-        body: Center(
-          child: Text('Данные о лоте отсутствуют.'),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Header(text: 'Детали лота'),
+            Expanded(
+              child: Center(
+                child: Text('Данные о лоте отсутствуют.'),
+              ),
+            ),
+          ],
         ),
       );
     }
     return TradeDetail(lot: selectedLot!);
+  }
+
+  Widget buildOption4() {
+    return Scaffold(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Используем Header вместо AppBar
+          Header(
+            text: selectedId != null
+                ? 'Торги / Лот ${selectedId!}'
+                : 'Торги / Лот',
+          ),
+          // Расширенный виджет LotInfo, передавая id
+          Expanded(
+            child: selectedId != null
+                ? LotInfo(lotId: selectedId!)
+                : Center(
+                    child: Text(
+                      'ID не передан.',
+                      style: TextStyle(fontSize: 20),
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
   }
 
   void switchOption(int newOption, {Map<String, dynamic>? lotData}) {
@@ -91,18 +126,21 @@ class _TradesScreenState extends State<TradesScreen> {
       option = newOption;
       if (newOption == 3 && lotData != null) {
         selectedLot = lotData;
+      } else {
+        selectedLot = null;
+      }
+
+      if (newOption != 4) {
+        selectedId = null; // Сбрасываем selectedId, если не опция 4
       }
     });
   }
 
   /// Функция для обработки нажатия на изображение
   void handleImageTap(int lotId) {
-    // Используем Navigator.push для перехода на LotInfo
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => LotInfo(lotId: lotId),
-      ),
-    );
+    setState(() {
+      option = 4;
+      selectedId = lotId; // Сохраняем переданный id
+    });
   }
 }

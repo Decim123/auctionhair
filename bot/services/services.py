@@ -1,8 +1,8 @@
 import httpx
 
-api_url = 'https://2710-91-188-188-116.ngrok-free.app/api/'
-app_url = 'https://2710-91-188-188-116.ngrok-free.app'
-admin_url = 'https://2710-91-188-188-116.ngrok-free.app/admin/'
+api_url = 'https://b2eb-91-188-188-116.ngrok-free.app/api/'
+app_url = 'https://b2eb-91-188-188-116.ngrok-free.app'
+admin_url = 'https://b2eb-91-188-188-116.ngrok-free.app/admin/'
 
 async def check_key_via_api(key: str) -> int:
     try:

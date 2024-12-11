@@ -1,5 +1,7 @@
 # db.py
 
+import subprocess
+import mimetypes
 from typing import List
 import uuid
 import aiosqlite
@@ -10,8 +12,11 @@ from api.models import *
 from fastapi import HTTPException, UploadFile
 from PIL import Image
 from io import BytesIO
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 DB_PATH = os.path.join(os.path.dirname(__file__), '../database/db.sqlite')
+current_time = datetime.now(ZoneInfo('Europe/Moscow'))
 
 COUNTRIES = {
     "Россия": ["Московская область", "Брянская область"],
@@ -31,13 +36,18 @@ status_mapping = {
     "Состоялся": 1,
     "Завершен": 2,
     "Прием предложений": 3,
-    "Определение победителя": 4
+    "Определение победителя": 4,
+    "Открыт спор": 5,
+    "Оплачен": 6,
+    "Отправлен": 7,
+    "Получен": 8,
+    "Отменен": 9
     }
 
 trade_type_mapping = {
     'Аукцион': 'auction',
-    'Запрос предложений': 'asks',
-    'Все': ['auction', 'asks']
+    'Запрос предложений': 'ask',
+    'Все': ['auction', 'ask']
 }
 
 # OUTPUT
@@ -168,7 +178,7 @@ async def get_user_auctions(tg_id: int) -> List[Auction]:
                     weight=row[8],
                     description=row[9],
                     price=row[10],
-                    period=row[11],
+                    period=str(row[11]),
                     step=row[12],
                     views=row[13],
                     status=row[14],
@@ -176,6 +186,33 @@ async def get_user_auctions(tg_id: int) -> List[Auction]:
                 )
                 auctions.append(auction)
     return auctions
+
+async def get_user_asks(tg_id: int) -> List[Ask]:
+    asks = []
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT * FROM lots WHERE tg_id = ? AND lot_type = 'ask'", (tg_id,)) as cursor:
+            rows = await cursor.fetchall()
+            for row in rows:
+                ask = Ask(
+                    id=row[0],
+                    tg_id=row[1],
+                    lot_type=row[2],
+                    long=row[3],
+                    natural_color=row[4],
+                    now_color=row[5],
+                    type=row[6],
+                    age=row[7],
+                    weight=row[8],
+                    description=row[9],
+                    price=row[10],
+                    period=str(row[11]),
+                    step=row[12],
+                    views=row[13],
+                    status=row[14],
+                    high_price=row[15],
+                )
+                asks.append(ask)
+    return asks
 
 async def get_user_region_country(tg_id: int) -> Optional[dict]:
     async with aiosqlite.connect(DB_PATH) as db:
@@ -195,18 +232,30 @@ async def get_user_region_country(tg_id: int) -> Optional[dict]:
 async def fetch_sorted_lots(params: SortParameters) -> List[int]:
     query = "SELECT id FROM lots WHERE 1=1"
     values = []
+    params.trade_type = 'Все' if params.trade_type is None else params.trade_type
+    
+    #async def show_filtred(now_query, now_values, filter):
+    #    async with aiosqlite.connect(DB_PATH) as db:
+    #        db.row_factory = aiosqlite.Row
+    #        async with db.execute(now_query, tuple(now_values)) as cursor:
+    #            rows = await cursor.fetchall()
+    #            lot_ids = [row["id"] for row in rows]
+    #            print(f'Сортировка по {filter} вернула',lot_ids)
 
+    print('TRADE TYPE',params.trade_type)
     if params.trade_type and params.trade_type != 'Все':
         mapped_trade_type = trade_type_mapping.get(params.trade_type)
         if mapped_trade_type:
             query += " AND lot_type = ?"
             values.append(mapped_trade_type)
+            #await show_filtred(query, values, '1')
     elif params.trade_type == 'Все':
         mapped_trade_types = trade_type_mapping.get('Все', [])
         if mapped_trade_types:
             placeholders = ','.join(['?'] * len(mapped_trade_types))
             query += f" AND lot_type IN ({placeholders})"
             values.extend(mapped_trade_types)
+            #await show_filtred(query, values, '2')
 
     if params.trade_status and params.trade_status != 'Все':
         mapped_status = status_mapping.get(params.trade_status)
@@ -215,49 +264,55 @@ async def fetch_sorted_lots(params: SortParameters) -> List[int]:
                 placeholders = ','.join(['?'] * len(mapped_status))
                 query += f" AND status IN ({placeholders})"
                 values.extend(mapped_status)
+                #await show_filtred(query, values, '3')
             else:
                 query += " AND status = ?"
                 values.append(mapped_status)
+                #await show_filtred(query, values, '4')
     elif params.trade_status == 'Все':
         mapped_status = status_mapping.get('Все', [])
         if mapped_status:
             placeholders = ','.join(['?'] * len(mapped_status))
             query += f" AND status IN ({placeholders})"
             values.extend(mapped_status)
+            #await show_filtred(query, values, '5')
 
     min_price = params.min_price if params.min_price is not None else 0
     max_price = params.max_price if params.max_price is not None else 50000
     query += " AND price BETWEEN ? AND ?"
     values.extend([min_price, max_price])
-
+    #await show_filtred(query, values, '6')
     min_length = params.min_length if params.min_length is not None else 11
     max_length = params.max_length if params.max_length is not None else 119
     query += " AND long BETWEEN ? AND ?"
     values.extend([min_length, max_length])
-
+    #await show_filtred(query, values, '7')
     natural_colors = params.natural_hair_colors if params.natural_hair_colors else ['Брюнет', 'Шатен', 'Русый', 'Рыжий', 'Блондин', 'Седой']
     if natural_colors:
         placeholders = ','.join(['?'] * len(natural_colors))
         query += f" AND natural_color IN ({placeholders})"
         values.extend(natural_colors)
-
+        #await show_filtred(query, values, '8')
     current_colors = params.current_hair_colors if params.current_hair_colors else ['Брюнет', 'Шатен', 'Рыжий', 'Блондин', 'Русый', 'Седой']
     if current_colors:
         placeholders = ','.join(['?'] * len(current_colors))
         query += f" AND now_color IN ({placeholders})"
         values.extend(current_colors)
-
+        #await show_filtred(query, values, '9')
     hair_types = params.hair_types if params.hair_types else ['Прямые', 'Вьющиеся', 'Волнистые', 'Мелкие кудри']
     if hair_types:
         placeholders = ','.join(['?'] * len(hair_types))
         query += f" AND type IN ({placeholders})"
         values.extend(hair_types)
+        #await show_filtred(query, values, '10')
 
-    min_weight = params.min_weight if params.min_weight is not None else 11
-    max_weight = params.max_weight if params.max_weight is not None else 999
-    query += " AND weight BETWEEN ? AND ?"
-    values.extend([min_weight, max_weight])
-
+    if not (params.min_weight is None and params.max_weight is None):
+        min_weight = params.min_weight if params.min_weight is not None else 11
+        max_weight = params.max_weight if params.max_weight is not None else 999
+        query += " AND weight BETWEEN ? AND ?"
+        values.extend([min_weight, max_weight])
+        #await show_filtred(query, values, '11')
+        
     query += " ORDER BY status ASC, price ASC, long ASC, natural_color ASC, now_color ASC, type ASC, weight ASC"
 
     async with aiosqlite.connect(DB_PATH) as db:
@@ -265,6 +320,7 @@ async def fetch_sorted_lots(params: SortParameters) -> List[int]:
         async with db.execute(query, tuple(values)) as cursor:
             rows = await cursor.fetchall()
             lot_ids = [row["id"] for row in rows]
+            print('ЛОТЫ ПОСЛЕ СОТРИРОВКИ', lot_ids)
             return lot_ids
       
 async def fetch_lot_by_id(lot_id: int) -> Optional[Lot]:
@@ -387,7 +443,7 @@ async def short_lot_info(number: int, userId: int) -> dict:
 async def lot_data_by_id(lot_id: int) -> Optional[dict]:
     query = """
     SELECT id, tg_id, lot_type, long, natural_color, now_color, type, age, weight, 
-           description, price, period, step, views, status, high_price
+           description, price, period, step, views, status, high_price, country, city
     FROM lots
     WHERE id = ?
     """
@@ -560,7 +616,6 @@ async def save_auction_to_db(
     auction_duration: str,
     images: List[UploadFile]
 ):
-    # Convert data types
     try:
         tg_id = int(tg_id)
         amount = int(amount)
@@ -569,10 +624,16 @@ async def save_auction_to_db(
         weight = int(weight)
         price = int(price)
         auction_duration = int(auction_duration)
-    except ValueError as e:
+    except ValueError:
         raise HTTPException(status_code=400, detail="Invalid input data type")
 
-    # Save data to the database
+    period = current_time + timedelta(days=auction_duration)
+    period_str = period.isoformat()
+    place_data = await get_user_region_country(tg_id)
+    city = place_data["city"]
+    country = place_data["country"]
+    print(city, country)
+
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute('''
             INSERT INTO lots (
@@ -587,8 +648,10 @@ async def save_auction_to_db(
                 description,
                 price,
                 period,
-                step
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                step,
+                country,
+                city
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             tg_id,
             'auction',
@@ -600,26 +663,104 @@ async def save_auction_to_db(
             weight,
             description,
             price,
-            auction_duration,
-            amount
+            period_str,
+            amount,
+            country,
+            city
         ))
         await db.commit()
         lot_id = cursor.lastrowid
 
-    # Save images
-    
-    images_dir = 'static/img/lots/auctions'
-    os.makedirs(images_dir, exist_ok=True)
-
+    tasks = []
     for idx, image in enumerate(images):
         extension = image.filename.split('.')[-1]
         filename = f"{lot_id}_{idx+1}.{extension}"
-        filepath = os.path.join(images_dir, filename)
-        content = await image.read()
-        with open(filepath, 'wb') as f:
-            f.write(content)
+        image_bytes = await image.read()
+        tasks.append(compress_and_save_image(image_bytes, filename))
+    
+    await asyncio.gather(*tasks)
 
     return lot_id
+
+async def save_ask_to_db(
+    tg_id: int,
+    amount: str,
+    length: str,
+    age: str,
+    description: str,
+    natural_color: str,
+    current_color: str,
+    hair_type: str,
+    images: List[UploadFile]
+):
+    try:
+        amount = int(amount)
+        length = int(length)
+        age = int(age)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid input data type")
+
+    place_data = await get_user_region_country(tg_id)
+    city = place_data["city"]
+    country = place_data["country"]
+
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute('''
+            INSERT INTO lots (
+                tg_id,
+                lot_type,
+                long,
+                natural_color,
+                now_color,
+                type,
+                age,
+                weight,
+                description,
+                price,
+                period,
+                step,
+                country,
+                city
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            tg_id,
+            'ask',
+            length,
+            natural_color,
+            current_color,
+            hair_type,
+            age,
+            0,
+            description,
+            amount,
+            0,
+            0,
+            country,
+            city
+        ))
+        await db.commit()
+        lot_id = cursor.lastrowid
+
+    tasks = []
+    for idx, file in enumerate(images):
+        extension = file.filename.split('.')[-1].lower()
+        filename = f"{lot_id}_{idx+1}.{extension}"
+        file_bytes = await file.read()
+
+        mime_type, _ = mimetypes.guess_type(file.filename)
+        print(f"Processing file: {file.filename}, MIME type: {mime_type}")
+
+        if mime_type and mime_type.startswith('video'):
+            tasks.append(compress_and_save_video(file_bytes, filename, 0))
+        elif extension in {'mp4', 'mov', 'avi', 'mkv', 'flv'}:
+            tasks.append(compress_and_save_video(file_bytes, filename, 0))
+        else:
+            tasks.append(compress_and_save_image(file_bytes, filename, 0))
+
+    await asyncio.gather(*tasks)
+
+    return lot_id
+
 
 async def save_auction_from_bot(
     tg_id: str,
@@ -643,11 +784,13 @@ async def save_auction_from_bot(
         age = int(age)
         weight = int(weight)
         price = int(price)
-        auction_duration = int(auction_duration)
+        auction_duration = str(auction_duration) if img == 1 else (current_time + timedelta(days=int(auction_duration))).isoformat()
     except ValueError as e:
         raise HTTPException(status_code=400, detail="Invalid input data type")
-
-    # Save data to the database
+    place_data = await get_user_region_country(tg_id)
+    city = place_data["city"]
+    country = place_data["country"]
+    print(city, country)
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute(f'''
             INSERT INTO {table} (
@@ -662,8 +805,10 @@ async def save_auction_from_bot(
                 description,
                 price,
                 period,
-                step
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                step,
+                country,
+                city
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             tg_id,
             'auction',
@@ -676,7 +821,9 @@ async def save_auction_from_bot(
             description,
             price,
             auction_duration,
-            amount
+            amount,
+            country,
+            city
         ))
         await db.commit()
         lot_id = cursor.lastrowid
@@ -687,8 +834,9 @@ async def update_city(tg_id: int, city: str):
         await db.execute('UPDATE users SET city = ? WHERE tg_id = ?', (city, tg_id))
         await db.commit()
 
-async def compress_and_save_image(image_bytes: bytes, file_name: str):
-    images_dir = 'static/img/lots/auctions'
+async def compress_and_save_image(image_bytes: bytes, file_name: str, lot_type: int):
+    lot_folder = 'auctions' if lot_type == 1 else 'asks'
+    images_dir = f'static/img/lots/{lot_folder}'
     save_path = os.path.join(images_dir, file_name)
     try:
         image = Image.open(BytesIO(image_bytes))
@@ -711,6 +859,48 @@ async def compress_and_save_image(image_bytes: bytes, file_name: str):
         print(f"Ошибка при сжатии и сохранении изображения: {e}")
         raise e
     
+async def compress_and_save_video(video_bytes: bytes, file_name: str, lot_type: int):
+    lot_folder = 'auctions' if lot_type == 1 else 'asks'
+    videos_dir = f'static/img/lots/{lot_folder}'
+    save_path = os.path.join(videos_dir, file_name)
+    try:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        temp_path = save_path + ".temp"
+        loop = asyncio.get_running_loop()
+        
+        # Сохранение временного видеофайла
+        with open(temp_path, "wb") as f:
+            await loop.run_in_executor(None, f.write, video_bytes)
+        
+        cmd = [
+            'ffmpeg',
+            '-i', temp_path,
+            '-vcodec', 'libx264',
+            '-crf', '28',
+            save_path
+        ]
+        
+        print(f"Running FFmpeg command: {' '.join(cmd)}")
+        
+        # Запуск FFmpeg асинхронно
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        
+        stdout, stderr = await process.communicate()
+        
+        if process.returncode != 0:
+            print(f"FFmpeg error: {stderr.decode()}")
+            raise Exception(stderr.decode())
+        
+        os.remove(temp_path)
+        print(f"Видео сохранено и сжато по пути: {save_path}")
+    except Exception as e:
+        print(f"Ошибка при сжатии и сохранении видео: {e}")
+        raise e
+
 async def like(userId: int, lot_id: int, value: int) -> dict:
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row

@@ -12,6 +12,8 @@ import '../widgets/auctions.dart';
 import '../constants.dart';
 import '../widgets/auction_creator.dart';
 import '../widgets/lot_info.dart';
+import '../widgets/asks.dart';
+import '../widgets/asks_creator.dart';
 
 class MyLotsScreen extends StatefulWidget {
   final VoidCallback onProceedVerification;
@@ -46,23 +48,33 @@ class _MyLotsScreenState extends State<MyLotsScreen> {
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'tg_id': userId,
-            'fields': ['verify']
+            'fields': ['verify', 'city']
           }),
         );
 
         if (response.statusCode == 200) {
           var data = jsonDecode(utf8.decode(response.bodyBytes));
+          String city = data['city'];
+          var verify = data['verify'];
           setState(() {
-            if (data['verify'] == 1 || data['verify'] == true) {
-              verificationMessage = 'Верификация пройдена';
-              option = 1;
-            } else if (data['verify'] == 0) {
-              verificationMessage =
-                  'Необходимо пройти верификацию для размещения лотов';
-              option = 2;
-            } else if (data['verify'] == 2) {
-              verificationMessage = 'Ваши данные проверяются';
-              option = 3;
+            if (city != 'Не указан') {
+              if (verify == 1 || verify == true) {
+                verificationMessage = 'Верификация пройдена';
+                option = 1;
+              } else if (verify == 0) {
+                verificationMessage =
+                    'Необходимо пройти верификацию для размещения лотов';
+                option = 2;
+              } else if (verify == 2) {
+                verificationMessage = 'Ваши данные проверяются';
+                option = 3;
+              } else {
+                verificationMessage = 'Неизвестный статус верификации';
+                option = 5;
+              }
+            } else {
+              verificationMessage = 'Выберите город в профиле';
+              option = 4;
             }
             isLoading = false;
           });
@@ -70,10 +82,8 @@ class _MyLotsScreenState extends State<MyLotsScreen> {
           setState(() {
             isLoading = false;
           });
-          print('Ошибка при получении данных: ${response.reasonPhrase}');
         }
       } catch (e) {
-        print('Ошибка при соединении с сервером: $e');
         setState(() {
           isLoading = false;
         });
@@ -82,7 +92,6 @@ class _MyLotsScreenState extends State<MyLotsScreen> {
       setState(() {
         isLoading = false;
       });
-      print('User ID not available');
     }
   }
 
@@ -112,6 +121,8 @@ class _MyLotsScreenState extends State<MyLotsScreen> {
         return buildOption6();
       case 7:
         return buildOption7();
+      case 8:
+        return buildOption8();
       default:
         return buildOption1();
     }
@@ -175,8 +186,18 @@ class _MyLotsScreenState extends State<MyLotsScreen> {
       children: [
         const Header(text: 'Мои лоты / Запросы предложений'),
         Expanded(
-          child: Center(
-            child: Text('Это контент для опции 4'),
+          child: Asks(
+            onCreateAsk: () {
+              setState(() {
+                option = 8;
+              });
+            },
+            onLotSelected: (lotData) {
+              setState(() {
+                selectedLotData = lotData;
+                option = 7;
+              });
+            },
           ),
         ),
       ],
@@ -237,6 +258,27 @@ class _MyLotsScreenState extends State<MyLotsScreen> {
         Expanded(
           child: LotInfo(
             lotId: selectedLotData!['id'],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildOption8() {
+    if (userId == null) {
+      return Center(child: Text('User ID not available'));
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Header(text: 'Мои лоты / Создать запрос предложений'),
+        Expanded(
+          child: AsksCreator(
+            onAskCreated: (data) {
+              setState(() {
+                option = 4;
+              });
+            },
           ),
         ),
       ],

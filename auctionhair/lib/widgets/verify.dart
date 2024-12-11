@@ -1,5 +1,3 @@
-// verify.dart
-
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -232,13 +230,12 @@ class _VerifyWidgetState extends State<VerifyWidget> {
       child: Row(
         children: [
           Text(
-            label,
+            '$label: ',
             style: TextStyle(
               color: Colors.grey,
               fontSize: 16,
             ),
           ),
-          SizedBox(width: 8),
           Text(
             value,
             style: TextStyle(
@@ -293,31 +290,31 @@ class _VerifyWidgetState extends State<VerifyWidget> {
                   ),
                 ),
                 SizedBox(height: 16),
-                GestureDetector(
-                  onTap: _pickImage,
-                  child: Container(
-                    width: blockWidth,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: _imageBytes != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.memory(
-                              _imageBytes!,
-                              width: blockWidth,
-                              height: 200,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        : Icon(
+                Container(
+                  width: blockWidth,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: _imageBytes != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.memory(
+                            _imageBytes!,
+                            width: blockWidth,
+                            height: 200,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : GestureDetector(
+                          onTap: _pickImage,
+                          child: Icon(
                             Icons.camera_alt,
                             size: 40,
                             color: Colors.grey[700],
                           ),
-                  ),
+                        ),
                 ),
                 SizedBox(height: 16),
                 SizedBox(
@@ -325,14 +322,24 @@ class _VerifyWidgetState extends State<VerifyWidget> {
                   child: ElevatedButton(
                     onPressed: _isButtonEnabled ? _submitData : null,
                     style: ElevatedButton.styleFrom(
-                      primary: _isButtonEnabled ? Colors.blue : Colors.grey,
+                      primary: _isButtonEnabled
+                          ? Color.fromARGB(255, 0, 122, 255)
+                          : Colors.grey,
                       onPrimary:
                           _isButtonEnabled ? Colors.white : Colors.grey[800],
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 40, vertical: 15),
+                    ),
+                    child: Text(
+                      'Пройти верификацию',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
                       ),
                     ),
-                    child: Text('Отправить'),
                   ),
                 ),
               ],

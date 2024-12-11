@@ -27,7 +27,6 @@ class _PhotoButtonState extends State<PhotoButton> {
     super.initState();
     attachedMedia = widget.attachedMedia;
 
-    // Detect if the platform is Android
     String userAgent = html.window.navigator.userAgent.toLowerCase();
     if (userAgent.contains('android')) {
       isAndroid = true;
@@ -86,7 +85,6 @@ class _PhotoButtonState extends State<PhotoButton> {
   @override
   Widget build(BuildContext context) {
     if (isAndroid) {
-      // If platform is Android, display centered text
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -98,7 +96,6 @@ class _PhotoButtonState extends State<PhotoButton> {
         ),
       );
     } else {
-      // If platform is not Android, display the usual UI
       return Column(
         children: [
           if (errorMessage != null)

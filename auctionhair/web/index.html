@@ -12,13 +12,41 @@
 
   <!-- Добавляем JavaScript-функции для взаимодействия с Telegram WebApp -->
   <script>
-
     window.Telegram.WebApp.ready();
     const tg = window.Telegram.WebApp;
-    tg.disableVerticalSwipes()
+    tg.disableVerticalSwipes();
     tg.setHeaderColor("#FFFFFF");
     tg.expand();
-
+  
+    // Проверяем, добавлен ли ярлык
+    tg.checkHomeScreenStatus()
+      .then(status => {
+        if (!status.added) {
+          // Если ярлык ещё не добавлен, пытаемся его добавить
+          tg.addToHomeScreen()
+            .then(() => {
+              console.log('Ярлык добавлен на главный экран');
+            })
+            .catch(error => {
+              console.error('Ошибка при добавлении ярлыка:', error);
+            });
+        } else {
+          console.log('Ярлык уже добавлен на главный экран');
+        }
+      })
+      .catch(error => {
+        console.error('Ошибка при проверке статуса ярлыка:', error);
+      });
+  
+    // Обработка событий
+    tg.onEvent('homeScreenAdded', () => {
+      console.log('Ярлык успешно добавлен');
+    });
+  
+    tg.onEvent('homeScreenChecked', status => {
+      console.log('Статус ярлыка проверен:', status);
+    });
+  
     function initTelegramWebApp() {
       if (window.Telegram) {
         Telegram.WebApp.ready();
@@ -26,13 +54,13 @@
       }
       return null;
     }
-
+  
     function sendTelegramData(data) {
       if (window.Telegram) {
         Telegram.WebApp.sendData(data);
       }
     }
-
+  
     function setMainButton(text, isVisible) {
       if (window.Telegram) {
         Telegram.WebApp.MainButton.setText(text);
@@ -44,6 +72,7 @@
       }
     }
   </script>
+  
 
   <!-- Flutter initialization JS code -->
   <script src="flutter.js" defer></script>

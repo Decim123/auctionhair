@@ -20,6 +20,12 @@ dependencies:
   file_selector: ^0.9.2
   photo_view: ^0.15.0
   file_picker: ^5.2.3
+  intl: ^0.19.0
+  video_player: ^2.8.5
+  flutter_html: ^3.0.0-beta.2
+  cached_network_image: ^3.3.0
+  cached_network_image_web: ^1.1.0
+  cached_network_image_platform_interface: ^3.0.0
 
   
 

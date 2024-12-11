@@ -56,7 +56,7 @@ class Lots extends StatelessWidget {
                 ElevatedButton(
                   onPressed: onFirstButtonPressed,
                   style: ElevatedButton.styleFrom(
-                    primary: Colors.blue,
+                    primary: const Color.fromARGB(255, 0, 122, 255),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
@@ -110,7 +110,7 @@ class Lots extends StatelessWidget {
                 ElevatedButton(
                   onPressed: onSecondButtonPressed,
                   style: ElevatedButton.styleFrom(
-                    primary: Colors.blue,
+                    primary: const Color.fromARGB(255, 0, 122, 255),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),

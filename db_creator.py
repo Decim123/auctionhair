@@ -132,7 +132,9 @@ async def create_db():
                 step INTEGER,
                 views INTEGER DEFAULT 0,
                 status INTEGER DEFAULT 0,
-                high_price INTEGER DEFAULT 0
+                high_price INTEGER DEFAULT 0,
+                country TEXT,
+                city TEXT
             )
         ''')
 
@@ -153,7 +155,9 @@ async def create_db():
                 step INTEGER,
                 views INTEGER DEFAULT 0,
                 status INTEGER DEFAULT 0,
-                high_price INTEGER DEFAULT 0
+                high_price INTEGER DEFAULT 0,
+                country TEXT,
+                city TEXT
             )
         ''')
         # Вставка ключа '123' с access_level = 3

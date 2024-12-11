@@ -174,6 +174,31 @@ async def auction_create(
     )
     return {"status": "success", "lot_id": lot_id}
 
+@api_router.post("/ask_create")
+async def create_ask(
+    tg_id: int = Form(...),
+    amount: str = Form(...),
+    length: str = Form(...),
+    age: str = Form(...),
+    description: str = Form(...),
+    natural_color: str = Form(...),
+    current_color: str = Form(...),
+    hair_type: str = Form(...),
+    images: List[UploadFile] = File(...)
+):
+    lot_id = await save_ask_to_db(
+        tg_id,
+        amount,
+        length,
+        age,
+        description,
+        natural_color,
+        current_color,
+        hair_type,
+        images
+    )
+    return JSONResponse(content={"message": "Данные получены успешно", "lot_id": lot_id}, status_code=201)
+
 @api_router.post("/get_auctions")
 async def get_auctions(request: GetAuctionsRequest):
     tg_id = request.tg_id
@@ -181,40 +206,60 @@ async def get_auctions(request: GetAuctionsRequest):
     print(auctions)
     return [auction.dict() for auction in auctions]
 
+@api_router.post("/get_asks")
+async def get_auctions(request: GetAsksRequest):
+    tg_id = request.tg_id
+    asks = await get_user_asks(tg_id)
+    print(asks)
+    return [ask.dict() for ask in asks]
+
 @api_router.get("/get_auction_photo", response_model=List[str])
 async def get_auction_photo(id: int = Query(..., description="Auction ID")):
-    # Определение местоположения текущего файла
     current_file_path = os.path.abspath(__file__)
     current_dir = os.path.dirname(current_file_path)
-    
-    # Построение пути к целевой директории относительно текущего файла
     relative_directory = "../static/img/lots/auctions/"
     directory = os.path.abspath(os.path.join(current_dir, relative_directory))
-    
-    # Вывод полного пути для отладки
-    print(f"Текущий рабочий каталог: {os.getcwd()}")
-    print(f"Полный путь директории для изображений: {directory}")
-    
-    # Проверка существования директории
     if not os.path.exists(directory):
         raise HTTPException(status_code=404, detail="Directory not found")
-    
+
     try:
-        # Получение списка файлов в директории
         files = os.listdir(directory)
     except OSError as e:
         raise HTTPException(status_code=500, detail=f"Error accessing directory: {e}")
-    
-    # Фильтрация файлов по условиям
+
     matching_files = [
         file_name for file_name in files
         if os.path.isfile(os.path.join(directory, file_name)) and
            file_name.startswith(f"{id}_") and
            os.path.splitext(file_name)[1].lower() in ['.png', '.jpg']
     ]
-    
-    # Вывод найденных файлов для отладки
+
     print(f"Найденные файлы для аукциона {id}: {matching_files}")
+    
+    return matching_files
+
+@api_router.get("/get_asks_media", response_model=List[str])
+async def get_auction_photo(id: int = Query(..., description="Auction ID")):
+    current_file_path = os.path.abspath(__file__)
+    current_dir = os.path.dirname(current_file_path)
+    relative_directory = "../static/img/lots/asks/"
+    directory = os.path.abspath(os.path.join(current_dir, relative_directory))
+    if not os.path.exists(directory):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    try:
+        files = os.listdir(directory)
+    except OSError as e:
+        raise HTTPException(status_code=500, detail=f"Error accessing directory: {e}")
+
+    matching_files = [
+        file_name for file_name in files
+        if os.path.isfile(os.path.join(directory, file_name)) and
+           file_name.startswith(f"{id}_") and
+           os.path.splitext(file_name)[1].lower() in ['.png', '.jpg', '.mp4']
+    ]
+
+    print(f"Найденные файлы для запроса {id}: {matching_files}")
     
     return matching_files
 

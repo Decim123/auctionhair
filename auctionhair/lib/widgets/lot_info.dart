@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../constants.dart'; // Предполагается, что здесь определен BASE_API_URL
 import 'photo_slider.dart';
+import '../widgets/time.dart'; // Импорт CountdownTimer
 
 class LotInfo extends StatefulWidget {
   final int lotId;
@@ -20,13 +21,20 @@ class _LotInfoState extends State<LotInfo> {
   bool isLoading = true;
   String? errorMessage;
 
+  final Map<int, Map<String, dynamic>> statusList = {
+    0: {'text': 'Прием ставок', 'color': Color(0xFF007AFF)},
+    1: {'text': 'Состоялся', 'color': Color(0xFF4CD964)},
+    2: {'text': 'Завершен', 'color': Color(0xFF34C759)},
+    3: {'text': 'Прием предложений', 'color': Color(0xFFFF9500)},
+    4: {'text': 'Определение победителя', 'color': Color(0xFFFF3B30)},
+  };
+
   @override
   void initState() {
     super.initState();
     fetchLotData();
   }
 
-  // Функция для получения данных о лоте из API
   Future<void> fetchLotData() async {
     final url = Uri.parse('$BASE_API_URL/api/get_lot_data_by_id');
 
@@ -38,7 +46,7 @@ class _LotInfoState extends State<LotInfo> {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         setState(() {
           lotData = data;
           isLoading = false;
@@ -64,106 +72,150 @@ class _LotInfoState extends State<LotInfo> {
 
   @override
   Widget build(BuildContext context) {
-    // Пока идет загрузка данных
     if (isLoading) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('Детали лота'),
-        ),
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
+      return const Center(
+        child: CircularProgressIndicator(),
       );
     }
 
-    // Если произошла ошибка
     if (errorMessage != null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('Детали лота'),
-        ),
-        body: Center(
-          child: Text(
-            errorMessage!,
-            style: TextStyle(color: Colors.red, fontSize: 16),
-          ),
+      return Center(
+        child: Text(
+          errorMessage!,
+          style: const TextStyle(color: Colors.red, fontSize: 16),
+          textAlign: TextAlign.center,
         ),
       );
     }
 
-    // Если данные успешно получены
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Детали лота'),
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Используем виджет PhotoSlider, передавая id лота
-            PhotoSlider(id: lotData!['id']),
-            SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Статус и другие детали
-                  _buildDetailRow(
-                      'Статус', lotData!['status']?.toString() ?? 'нет данных'),
-                  SizedBox(height: 4),
-                  _buildDetailRow('Город', lotData!['city'] ?? 'нет данных'),
-                  SizedBox(height: 4),
-                  _buildDetailRow('До окончания',
-                      lotData!['period']?.toString() ?? 'нет данных'),
-                  SizedBox(height: 4),
-                  _buildDetailRow('Победитель будет определен не позднее',
-                      lotData!['winner_deadline'] ?? 'нет данных'),
-                  SizedBox(height: 16),
-                  Divider(color: Colors.grey),
-                  SizedBox(height: 16),
-                  _buildDetailRow(
-                      'Длина', lotData!['long']?.toString() ?? 'нет данных'),
-                  SizedBox(height: 4),
-                  _buildDetailRow('Натуральный цвет',
-                      lotData!['natural_color'] ?? 'нет данных'),
-                  SizedBox(height: 4),
-                  _buildDetailRow(
-                      'Текущий цвет', lotData!['now_color'] ?? 'нет данных'),
-                  SizedBox(height: 4),
-                  _buildDetailRow('Тип', lotData!['type'] ?? 'нет данных'),
-                  SizedBox(height: 4),
-                  _buildDetailRow('Возраст донора',
-                      lotData!['age']?.toString() ?? 'нет данных'),
-                  SizedBox(height: 16),
-                  Text(
-                    '${lotData!['description'] ?? ''}',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Вспомогательный виджет для отображения строки с деталями
-  Widget _buildDetailRow(String title, String value) {
-    return Text.rich(
-      TextSpan(
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextSpan(
-            text: '$title: ',
-            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
-          ),
-          TextSpan(
-            text: value,
-            style: TextStyle(color: Colors.black),
+          PhotoSlider(id: lotData!['id']),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildDetailRow(
+                  'Статус',
+                  getStatusText(lotData!['status']),
+                  getStatusColor(lotData!['status']),
+                ),
+                const SizedBox(height: 4),
+                _buildDetailRow('Город', lotData!['city'] ?? 'нет данных'),
+                const SizedBox(height: 4),
+                _buildDetailRowWithTimer(
+                  'До окончания',
+                  lotData!['period']?.toString() ?? 'нет данных',
+                ),
+                const SizedBox(height: 4),
+                _buildDetailRow(
+                  'Победитель будет определен не позднее',
+                  lotData!['winner_deadline'] ?? 'нет данных',
+                ),
+                const SizedBox(height: 16),
+                const Divider(color: Colors.grey),
+                const SizedBox(height: 16),
+                _buildDetailRow(
+                  'Длина',
+                  lotData!['long']?.toString() ?? 'нет данных',
+                ),
+                const SizedBox(height: 4),
+                _buildDetailRow(
+                  'Натуральный цвет',
+                  lotData!['natural_color'] ?? 'нет данных',
+                ),
+                const SizedBox(height: 4),
+                _buildDetailRow(
+                  'Текущий цвет',
+                  lotData!['now_color'] ?? 'нет данных',
+                ),
+                const SizedBox(height: 4),
+                _buildDetailRow(
+                  'Тип',
+                  lotData!['type'] ?? 'нет данных',
+                ),
+                const SizedBox(height: 4),
+                _buildDetailRow(
+                  'Возраст донора',
+                  lotData!['age']?.toString() ?? 'нет данных',
+                ),
+                const SizedBox(height: 16),
+                const Divider(color: Colors.grey),
+                const SizedBox(height: 16),
+                Text(
+                  '${lotData!['description'] ?? ''}',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 16),
+                const Divider(color: Colors.grey),
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildDetailRow(String title, String value, [Color? valueColor]) {
+    return RichText(
+      text: TextSpan(
+        children: [
+          TextSpan(
+            text: '$title: ',
+            style: const TextStyle(
+              color: Colors.grey,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          TextSpan(
+            text: value,
+            style: TextStyle(
+              color: valueColor ?? Colors.black,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRowWithTimer(String title, String period) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          '$title: ',
+          style: const TextStyle(
+            fontSize: 14,
+            color: Colors.grey,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Flexible(
+          child: CountdownTimer(
+            targetTimeString: period,
+            style: const TextStyle(
+              fontSize: 14, // Соответствует размеру остального текста
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String getStatusText(int status) {
+    return statusList[status]?['text'] ?? 'Неизвестно';
+  }
+
+  Color getStatusColor(int status) {
+    return statusList[status]?['color'] ?? Colors.grey;
   }
 }

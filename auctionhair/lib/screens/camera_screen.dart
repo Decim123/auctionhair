@@ -1,5 +1,3 @@
-// camera_screen.dart
-
 import 'dart:html' as html;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -16,7 +14,6 @@ class CameraScreen extends StatefulWidget {
 class _CameraScreenState extends State<CameraScreen> {
   late html.VideoElement videoElement;
   html.MediaStream? cameraStream;
-  String debugMessage = 'Инициализация...';
   bool isPreviewing = false;
   html.CanvasElement? canvasElement;
   String? capturedImageDataUrl;
@@ -24,6 +21,7 @@ class _CameraScreenState extends State<CameraScreen> {
   @override
   void initState() {
     super.initState();
+    print('Initializing CameraScreen');
     videoElement = html.VideoElement()
       ..autoplay = true
       ..setAttribute('playsinline', 'true')
@@ -32,132 +30,172 @@ class _CameraScreenState extends State<CameraScreen> {
       ..style.display = 'block'
       ..style.backgroundColor = 'black';
 
-    ui.platformViewRegistry
-        .registerViewFactory('videoElement', (int viewId) => videoElement);
+    ui.platformViewRegistry.registerViewFactory(
+      'videoElement',
+      (int viewId) => videoElement,
+    );
 
     _initializeCamera();
   }
 
   Future<void> _initializeCamera() async {
-    setState(() {
-      debugMessage = 'Запрашиваем доступ к камере...';
-    });
-
+    print('Attempting to initialize camera');
     try {
       cameraStream = await html.window.navigator.mediaDevices?.getUserMedia({
         'video': {
-          'facingMode': {'exact': 'environment'}
+          'facingMode': {'exact': 'user'}
         }
       });
 
       if (cameraStream != null) {
-        setState(() {
-          debugMessage =
-              'Доступ к камере получен. Инициализация видеопотока...';
-        });
-
-        Future.delayed(Duration(milliseconds: 100), () {
-          if (mounted) {
-            videoElement.srcObject = cameraStream;
-            videoElement.play().catchError((error) {
-              setState(() {
-                debugMessage = 'Ошибка воспроизведения: $error';
-              });
-            });
-            setState(() {
-              debugMessage = 'Видео поток привязан и воспроизводится.';
-            });
-          }
+        print('Camera stream obtained');
+        videoElement.srcObject = cameraStream;
+        videoElement.play().then((_) {
+          print('Video stream playing');
+        }).catchError((error) {
+          print('Error playing video stream: $error');
         });
       } else {
-        setState(() {
-          debugMessage = 'Ошибка: Не удалось получить доступ к камере';
-        });
+        print('Failed to obtain camera stream');
       }
     } catch (e) {
-      setState(() {
-        debugMessage = 'Ошибка доступа к камере: $e';
-      });
+      print('Exception during camera initialization: $e');
     }
   }
 
   void _capturePhoto() {
+    print('Capturing photo');
     canvasElement = html.CanvasElement(
-        width: videoElement.videoWidth, height: videoElement.videoHeight);
+      width: videoElement.videoWidth,
+      height: videoElement.videoHeight,
+    );
     canvasElement!.context2D.drawImage(videoElement, 0, 0);
     capturedImageDataUrl = canvasElement!.toDataUrl('image/png');
     setState(() {
       isPreviewing = true;
     });
+    print('Photo captured');
   }
 
   void _retakePhoto() {
+    print('Retaking photo');
     setState(() {
       isPreviewing = false;
       capturedImageDataUrl = null;
     });
+    // Ensure the video stream is playing again
+    if (cameraStream != null) {
+      videoElement.play().then((_) {
+        print('Video stream resumed after retake');
+      }).catchError((error) {
+        print('Error resuming video stream: $error');
+      });
+    } else {
+      print('Camera stream is null, reinitializing camera');
+      _initializeCamera();
+    }
   }
 
   void _acceptPhoto() {
+    print('Accepting photo');
     Navigator.pop(context, capturedImageDataUrl);
+    _stopCamera();
   }
 
   void _stopCamera() {
+    print('Stopping camera');
     if (cameraStream != null) {
-      cameraStream?.getTracks().forEach((track) => track.stop());
+      for (var track in cameraStream!.getTracks()) {
+        print('Stopping track: ${track.kind}');
+        track.stop();
+      }
       cameraStream = null;
     }
     videoElement.srcObject = null;
+    print('Camera stopped');
   }
 
   @override
   void dispose() {
+    print('Disposing CameraScreen');
     _stopCamera();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    print('Building CameraScreen');
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Камера - ${widget.name}'),
-      ),
       body: isPreviewing
-          ? Column(
+          ? Stack(
               children: [
-                Expanded(
+                Positioned.fill(
                   child: capturedImageDataUrl != null
-                      ? Image.network(capturedImageDataUrl!)
+                      ? Image.network(
+                          capturedImageDataUrl!,
+                          fit: BoxFit.cover,
+                        )
                       : Container(),
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton(
-                      onPressed: _retakePhoto,
-                      child: Text('Сделать другое фото'),
-                    ),
-                    ElevatedButton(
-                      onPressed: _acceptPhoto,
-                      child: Text('Сохранить фото'),
-                    ),
-                  ],
+                Positioned(
+                  bottom: 30,
+                  left: 50,
+                  right: 50,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      GestureDetector(
+                        onTap: _retakePhoto,
+                        child: CircleAvatar(
+                          radius: 30,
+                          backgroundColor: Colors.red,
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: _acceptPhoto,
+                        child: CircleAvatar(
+                          radius: 30,
+                          backgroundColor: Colors.green,
+                          child: const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             )
-          : Column(
+          : Stack(
               children: [
-                Text(
-                  debugMessage,
-                  style: const TextStyle(color: Colors.red, fontSize: 16),
-                  textAlign: TextAlign.center,
-                ),
-                Expanded(
+                Positioned.fill(
                   child: HtmlElementView(viewType: 'videoElement'),
                 ),
-                ElevatedButton(
-                  onPressed: _capturePhoto,
-                  child: Text('Сделать фото'),
+                Positioned(
+                  bottom: 30,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: GestureDetector(
+                      onTap: _capturePhoto,
+                      child: CircleAvatar(
+                        radius: 35,
+                        backgroundColor: Colors.white.withOpacity(0.7),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          color: Colors.black,
+                          size: 35,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),

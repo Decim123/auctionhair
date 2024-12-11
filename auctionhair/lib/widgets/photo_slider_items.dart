@@ -1,15 +1,14 @@
-// photo_slider_items.dart
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../constants.dart';
 import 'package:get/get.dart';
-import 'like.dart';
+import 'dart:html' as html;
+import 'dart:ui' as ui;
 
 class PhotoSlider extends StatefulWidget {
   final int id;
-  final Function(int) onImageTap; // Добавляем коллбек
+  final Function(int) onImageTap;
 
   const PhotoSlider({Key? key, required this.id, required this.onImageTap})
       : super(key: key);
@@ -19,30 +18,28 @@ class PhotoSlider extends StatefulWidget {
 }
 
 class _PhotoSliderState extends State<PhotoSlider> {
-  List<String> photoFilenames = [];
+  List<String> mediaFilenames = [];
   bool isLoading = true;
   String? errorMessage;
   int _currentIndex = 0;
-  List<String> imageUrls = [];
+  List<String> mediaUrls = [];
   late PageController _pageController;
+  int lot_type = 1;
+  final Set<String> _registeredViewTypes = {};
 
   @override
   void initState() {
     super.initState();
-    // Инициализируем PageController с начальной страницей
     _pageController = PageController(initialPage: _currentIndex);
-    // Запускаем загрузку фотографий
     fetchAuctionPhotos();
   }
 
   @override
   void dispose() {
-    // Освобождаем ресурсы PageController при уничтожении виджета
     _pageController.dispose();
     super.dispose();
   }
 
-  /// Метод для загрузки фотографий аукциона
   Future<void> fetchAuctionPhotos() async {
     setState(() {
       isLoading = true;
@@ -52,26 +49,73 @@ class _PhotoSliderState extends State<PhotoSlider> {
     try {
       int id = widget.id;
       var url = Uri.parse('$BASE_API_URL/api/get_auction_photo?id=$id');
-
       var response = await http.get(url);
-
       if (response.statusCode == 200) {
-        // Парсим полученные данные
         List<dynamic> decoded = jsonDecode(utf8.decode(response.bodyBytes));
         List<String> filenames = decoded.cast<String>();
-        List<String> urls = filenames
-            .map((filename) =>
-                '$BASE_API_URL/static/img/lots/auctions/$filename')
-            .toList();
+        if (filenames.isNotEmpty) {
+          lot_type = 1;
+          mediaFilenames = filenames;
+          mediaUrls = filenames
+              .map((filename) =>
+                  '$BASE_API_URL/static/img/lots/auctions/$filename')
+              .toList();
+        } else {
+          var askUrl = Uri.parse('$BASE_API_URL/api/get_asks_media?id=$id');
+          var askResponse = await http.get(askUrl);
+          if (askResponse.statusCode == 200) {
+            List<dynamic> askDecoded =
+                jsonDecode(utf8.decode(askResponse.bodyBytes));
+            List<String> askFilenames = askDecoded.cast<String>();
+            lot_type = 2;
+            mediaFilenames = askFilenames;
+            mediaUrls = askFilenames
+                .map((filename) =>
+                    '$BASE_API_URL/static/img/lots/asks/$filename')
+                .toList();
+          } else {
+            setState(() {
+              errorMessage =
+                  'Не удалось загрузить фотографии. Код ошибки: ${askResponse.statusCode}';
+              isLoading = false;
+            });
+            return;
+          }
+        }
 
-        // Предзагрузка изображений
-        for (var imageUrl in urls) {
-          precacheImage(NetworkImage(imageUrl), context);
+        mediaUrls.sort((a, b) {
+          bool aVideo = isVideo(a);
+          bool bVideo = isVideo(b);
+          if (aVideo && !bVideo) return -1;
+          if (!aVideo && bVideo) return 1;
+          return 0;
+        });
+
+        for (var mediaUrl in mediaUrls) {
+          if (isVideo(mediaUrl)) {
+            String viewType = 'video-$mediaUrl';
+            if (!_registeredViewTypes.contains(viewType)) {
+              html.VideoElement videoElement = html.VideoElement()
+                ..src = mediaUrl
+                ..autoplay = true
+                ..loop = true
+                ..muted = true
+                ..controls = false
+                ..style.width = '100%'
+                ..style.height = '100%'
+                ..style.objectFit = 'cover';
+              ui.platformViewRegistry.registerViewFactory(
+                viewType,
+                (int viewId) => videoElement,
+              );
+              _registeredViewTypes.add(viewType);
+            }
+          } else {
+            precacheImage(NetworkImage(mediaUrl), context);
+          }
         }
 
         setState(() {
-          photoFilenames = filenames;
-          imageUrls = urls;
           isLoading = false;
         });
       } else {
@@ -89,9 +133,8 @@ class _PhotoSliderState extends State<PhotoSlider> {
     }
   }
 
-  /// Метод для навигации к определённой странице
   void _navigateToPage(int index) {
-    if (index >= 0 && index < imageUrls.length) {
+    if (index >= 0 && index < mediaUrls.length) {
       _pageController.animateToPage(
         index,
         duration: Duration(milliseconds: 300),
@@ -100,24 +143,24 @@ class _PhotoSliderState extends State<PhotoSlider> {
     }
   }
 
+  bool isVideo(String url) {
+    return url.toLowerCase().endsWith('.mp4');
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Вычисляем высоту слайдера (60% от высоты экрана)
     double sliderHeight = MediaQuery.of(context).size.height * 0.6;
 
     if (isLoading) {
-      // Отображаем индикатор загрузки
       return Center(child: CircularProgressIndicator());
     } else if (errorMessage != null) {
-      // Отображаем сообщение об ошибке
       return Center(
         child: Text(
           errorMessage!,
           style: TextStyle(fontSize: 16, color: Colors.red),
         ),
       );
-    } else if (photoFilenames.isEmpty) {
-      // Отображаем сообщение, если фотографии отсутствуют
+    } else if (mediaFilenames.isEmpty) {
       return Center(child: Text('Фотографии отсутствуют.'));
     } else {
       return Container(
@@ -125,39 +168,54 @@ class _PhotoSliderState extends State<PhotoSlider> {
         height: sliderHeight,
         child: Stack(
           children: [
-            // Основной слайдер с изображениями
-            GestureDetector(
-              onTap: () => widget.onImageTap(widget.id), // Вызываем коллбек
-              child: PageView.builder(
-                itemCount: imageUrls.length,
-                controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentIndex = index;
-                  });
-                },
-                itemBuilder: (context, index) {
-                  String imageUrl = imageUrls[index];
-                  return Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Center(
-                        child: CircularProgressIndicator(),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return Center(
-                        child: Icon(Icons.error),
-                      );
-                    },
+            PageView.builder(
+              itemCount: mediaUrls.length,
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+              itemBuilder: (context, index) {
+                String mediaUrl = mediaUrls[index];
+                if (isVideo(mediaUrl)) {
+                  String viewType = 'video-$mediaUrl';
+                  return Stack(
+                    children: [
+                      HtmlElementView(viewType: viewType),
+                      Positioned.fill(
+                        child: GestureDetector(
+                          onTap: () => widget.onImageTap(widget.id),
+                          child: Container(
+                            color: Colors.transparent,
+                          ),
+                        ),
+                      ),
+                    ],
                   );
-                },
-              ),
+                } else {
+                  return GestureDetector(
+                    onTap: () => widget.onImageTap(widget.id),
+                    child: Image.network(
+                      mediaUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(
+                          child: Icon(Icons.error),
+                        );
+                      },
+                    ),
+                  );
+                }
+              },
             ),
-            // Левая стрелка для навигации к предыдущему изображению
             Positioned(
               left: 0,
               top: 0,
@@ -183,14 +241,13 @@ class _PhotoSliderState extends State<PhotoSlider> {
                 ),
               ),
             ),
-            // Правая стрелка для навигации к следующему изображению
             Positioned(
               right: 0,
               top: 0,
               bottom: 0,
               child: GestureDetector(
                 onTap: () {
-                  if (_currentIndex < imageUrls.length - 1) {
+                  if (_currentIndex < mediaUrls.length - 1) {
                     setState(() {
                       _currentIndex++;
                     });
@@ -209,7 +266,6 @@ class _PhotoSliderState extends State<PhotoSlider> {
                 ),
               ),
             ),
-            // Индикатор текущего слайда
             Positioned(
               bottom: 16,
               left: MediaQuery.of(context).size.width / 2 - 30,
@@ -220,7 +276,7 @@ class _PhotoSliderState extends State<PhotoSlider> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '${_currentIndex + 1}/${imageUrls.length}',
+                  '${_currentIndex + 1}/${mediaUrls.length}',
                   style: TextStyle(
                     color: Color.fromRGBO(0, 122, 255, 1),
                     fontSize: 16,

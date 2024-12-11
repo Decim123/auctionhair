@@ -6,15 +6,17 @@ from config_data.config import Config, load_config
 from handlers import user_handlers
 from aiogram.client.bot import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.types import BotCommand
+from aiogram.types import MenuButtonWebApp, WebAppInfo
+from services.services import app_url
 
-# Функция для установки меню команд
-async def set_commands(bot: Bot):
-    commands = [
-        BotCommand(command="start", description="старт")
-    ]
-    
-    await bot.set_my_commands(commands)
+# Функция для установки кастомной кнопки меню
+async def set_menu_button(bot: Bot):
+    menu_button = MenuButtonWebApp(
+        type='web_app',
+        text='Vite',
+        web_app=WebAppInfo(url=app_url)
+    )
+    await bot.set_chat_menu_button(menu_button=menu_button)
 
 # Инициализируем логгер
 logger = logging.getLogger(__name__)
@@ -26,7 +28,8 @@ async def main():
     logging.basicConfig(
         level=logging.INFO,
         format='%(filename)s:%(lineno)d #%(levelname)-8s '
-               '[%(asctime)s] - %(name)s - %(message)s')
+               '[%(asctime)s] - %(name)s - %(message)s'
+    )
 
     # Выводим в консоль информацию о начале запуска бота
     logger.info('Starting bot')
@@ -35,19 +38,21 @@ async def main():
     config: Config = load_config()
 
     # Инициализируем бот и диспетчер
-    bot = Bot(token=config.tg_bot.token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    bot = Bot(
+        token=config.tg_bot.token,
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+    )
     dp = Dispatcher()
     
     # Регистриуем роутеры в диспетчере
     dp.include_router(user_handlers.router)
 
-    # Устанавливаем команды для бота
-    await set_commands(bot)
+    # Устанавливаем кастомную кнопку меню
+    await set_menu_button(bot)
 
     # Пропускаем накопившиеся апдейты и запускаем polling
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
-
 
 if __name__ == '__main__':
     asyncio.run(main())

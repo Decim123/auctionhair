@@ -1,3 +1,5 @@
+// navbar.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../screens/trades_screen.dart';
@@ -15,40 +17,48 @@ class NavBar extends StatefulWidget {
 
 class _NavBarState extends State<NavBar> {
   int _selectedIndex = 0;
-  int profileInitialOption = 1; // Добавлено: для хранения initialOption
+  int profileInitialOption = 1;
+  List<Key> _keys = List.generate(5, (index) => UniqueKey());
 
   void _onItemTapped(int index) {
     setState(() {
-      _selectedIndex = index;
-      // Сбрасываем profileInitialOption при переключении на другой экран
-      if (index != 4) {
-        profileInitialOption = 1;
+      if (_selectedIndex == index) {
+        _keys[index] = UniqueKey();
+      } else {
+        _selectedIndex = index;
+        if (index != 4) {
+          profileInitialOption = 1;
+        }
       }
     });
   }
 
-  // Обновляем метод для построения текущего экрана
   Widget _buildCurrentScreen() {
     switch (_selectedIndex) {
       case 0:
-        return TradesScreen();
+        return TradesScreen(key: _keys[0]);
       case 1:
         return MyLotsScreen(
+          key: _keys[1],
           onProceedVerification: () {
             setState(() {
-              _selectedIndex = 4; // Переключаемся на ProfileScreen
-              profileInitialOption = 5; // Устанавливаем опцию 5
+              _selectedIndex = 4;
+              profileInitialOption = 5;
+              _keys[4] = UniqueKey();
             });
           },
         );
       case 2:
-        return ChatsScreen();
+        return ChatsScreen(key: _keys[2]);
       case 3:
-        return WalletScreen();
+        return WalletScreen(key: _keys[3]);
       case 4:
-        return ProfileScreen(initialOption: profileInitialOption);
+        return ProfileScreen(
+          key: _keys[4],
+          initialOption: profileInitialOption,
+        );
       default:
-        return TradesScreen();
+        return TradesScreen(key: _keys[0]);
     }
   }
 
@@ -68,7 +78,7 @@ class _NavBarState extends State<NavBar> {
         height: 80,
         child: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
-          backgroundColor: const Color(0xFFFFFFFF), // Устанавливаем белый фон
+          backgroundColor: const Color(0xFFFFFFFF),
           items: [
             BottomNavigationBarItem(
               icon: _buildIcon('assets/icons/trades_active.svg',

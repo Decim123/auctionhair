@@ -503,7 +503,7 @@ class _AuctionCreatorState extends State<AuctionCreator> {
                     width: MediaQuery.of(context).size.width * 0.9,
                     child: DropdownButtonFormField<String>(
                       decoration: InputDecoration(
-                        labelText: 'Срок аукциона',
+                        labelText: 'Срок аукциона (дни)',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),

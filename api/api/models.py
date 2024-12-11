@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 from typing import List
+from datetime import datetime
 
 # Модель для получения информации о пользователе
 class UserRequest(BaseModel):
@@ -48,13 +49,34 @@ class Auction(BaseModel):
     weight: int
     description: str
     price: int
-    period: int
+    period: datetime
+    step: int
+    views: int
+    status: int
+    high_price: int
+
+class Ask(BaseModel):
+    id: int
+    tg_id: int
+    lot_type: str
+    long: int
+    natural_color: str
+    now_color: str
+    type: str
+    age: int
+    weight: int
+    description: str
+    price: int
+    period: datetime
     step: int
     views: int
     status: int
     high_price: int
 
 class GetAuctionsRequest(BaseModel):
+    tg_id: int
+
+class GetAsksRequest(BaseModel):
     tg_id: int
 
 class SortParameters(BaseModel):
@@ -123,7 +145,7 @@ class LotShortInfoRequest(BaseModel):
 class LotShortInfoResponse(BaseModel):
     like: int
     step: int
-    period: int
+    period: datetime
     lot_type: str
     status: str
     long: int
@@ -152,8 +174,10 @@ class LotDataFull(BaseModel):
     weight: Optional[int] = None
     description: Optional[str] = None
     price: Optional[int] = None
-    period: Optional[int] = None
+    period: Optional[datetime] = None
     step: Optional[int] = None
     views: Optional[int] = 0
     status: Optional[int] = 0
     high_price: Optional[int] = 0
+    country: Optional[str] = None
+    city: Optional[str] = None

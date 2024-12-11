@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../constants.dart';
+import '../widgets/time.dart'; // Импорт CountdownTimer
 
 class AuctionsList extends StatefulWidget {
   final String filter;
@@ -32,8 +33,8 @@ class _AuctionsListState extends State<AuctionsList> {
     'Прием ставок': [0],
     'Состоялся': [1],
     'Завершен': [2],
-    'Оплачен': [3],
-    'Отменен': [4],
+    'Прием предложений': [3],
+    'Определение победителя': [4],
   };
 
   @override
@@ -113,9 +114,9 @@ class _AuctionsListState extends State<AuctionsList> {
     Map<int, Map<String, dynamic>> statusList = {
       0: {'text': 'Прием ставок', 'color': Color(0xFF007AFF)},
       1: {'text': 'Состоялся', 'color': Color(0xFF4CD964)},
-      2: {'text': 'Завершен', 'color': Color(0xFF34C759)},
-      3: {'text': 'Оплачен', 'color': Color(0xFFFF9500)},
-      4: {'text': 'Отменен', 'color': Color(0xFFFF3B30)},
+      2: {'text': 'Завершен', 'color': Color.fromARGB(255, 51, 48, 255)},
+      3: {'text': 'Прием предложений', 'color': Color(0xFF007AFF)},
+      4: {'text': 'Определение победителя', 'color': Color(0xFF34C759)},
     };
 
     return statusList[status]?['text'] ?? 'Неизвестно';
@@ -125,9 +126,9 @@ class _AuctionsListState extends State<AuctionsList> {
     Map<int, Map<String, dynamic>> statusList = {
       0: {'text': 'Прием ставок', 'color': Color(0xFF007AFF)},
       1: {'text': 'Состоялся', 'color': Color(0xFF4CD964)},
-      2: {'text': 'Завершен', 'color': Color(0xFF34C759)},
-      3: {'text': 'Оплачен', 'color': Color(0xFFFF9500)},
-      4: {'text': 'Отменен', 'color': Color(0xFFFF3B30)},
+      2: {'text': 'Завершен', 'color': Color.fromARGB(255, 51, 48, 255)},
+      3: {'text': 'Прием предложений', 'color': Color(0xFF007AFF)},
+      4: {'text': 'Определение победителя', 'color': Color(0xFF34C759)},
     };
 
     return statusList[status]?['color'] ?? Colors.grey;
@@ -163,7 +164,8 @@ class _AuctionsListState extends State<AuctionsList> {
         int id = auction['id'];
         int status = auction['status'];
         int highPrice = auction['high_price'];
-        int period = auction['period'];
+        String period =
+            auction['period']; // Предполагается, что это строка даты
         String naturalColor = auction['natural_color'];
         String nowColor = auction['now_color'];
         String type = auction['type'];
@@ -178,6 +180,8 @@ class _AuctionsListState extends State<AuctionsList> {
               color: Colors.transparent,
             ),
             child: Row(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start, // Выравнивание по верхнему краю
               children: [
                 Container(
                   width: MediaQuery.of(context).size.width * 0.3,
@@ -247,23 +251,29 @@ class _AuctionsListState extends State<AuctionsList> {
                         ),
                       ),
                       SizedBox(height: 4.0),
-                      RichText(
-                        text: TextSpan(
-                          text: 'До окончания: ',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            'До окончания: ',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
                           ),
-                          children: [
-                            TextSpan(
-                              text: '$period',
+                          // Используем Flexible, чтобы таймер занимал только необходимое пространство
+                          Flexible(
+                            child: CountdownTimer(
+                              targetTimeString: period,
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize:
+                                    14, // Соответствует размеру остального текста
+                                fontWeight: FontWeight.bold,
                                 color: Colors.black,
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                       SizedBox(height: 4.0),
                       RichText(

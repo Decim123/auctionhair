@@ -27,7 +27,6 @@ class _AuctionsState extends State<Auctions> {
     'Завершен',
     'Оплачен',
     'Отменен',
-    // Добавьте дополнительные фильтры, если необходимо
   ];
 
   final TelegramController telegramController = Get.find<TelegramController>();

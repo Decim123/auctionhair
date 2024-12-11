@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('modalName3').textContent = name_3;
                 document.getElementById('modalDate').textContent = date;
 
-                document.getElementById('modalUserPic').src = `/admin/user_images/${tg_id}.png`;
+                document.getElementById('modalUserPic').src = `/static/img/userpic/verify/${tg_id}.png`;
 
                 modal.style.display = "block";
 

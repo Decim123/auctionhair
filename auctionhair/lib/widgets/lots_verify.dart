@@ -21,11 +21,23 @@ class LotsVerify extends StatelessWidget {
           style: const TextStyle(fontSize: 18),
         ),
         const SizedBox(height: 20),
-        // Показываем кнопку только если данные не проверяются
         if (verificationMessage != 'Ваши данные проверяются')
           ElevatedButton(
             onPressed: onProceedVerification,
-            child: const Text('Пройти'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color.fromARGB(255, 0, 122, 255),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+            ),
+            child: const Text(
+              'Пройти',
+              style: TextStyle(
+                fontSize: 16,
+              ),
+            ),
           ),
       ],
     );
