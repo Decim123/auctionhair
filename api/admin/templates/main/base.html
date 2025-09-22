@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vite - {% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/main/base.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <button id="hamburger-button" class="hamburger">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="username">{{ user['full_name'] }}#{{ user['access_level'] }}</div>
+        <button class="logout-button" onclick="window.location.href='/admin/logout'">Выход</button>
+    </header>
+    <navbar id="sidebar">
+        <a href='/admin/statistics' class="nav-link">Статистика</a>
+        <a href='/admin/stuff' class="nav-link">Сотрудники</a>
+        <a href='/admin/verify' class="nav-link">Верификация</a>
+    </navbar>
+    <div class="content" id="content">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="{{ url_for('static', path='js/main.js') }}"></script>
+</body>
+</html>

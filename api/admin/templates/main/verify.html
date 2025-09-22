@@ -1,0 +1,86 @@
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', path='css/main/stuff_verify.css') }}">
+{% endblock %}
+
+{% block content %}
+    <h2>Ожидающие</h2>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Telegram ID</th>
+                    <th>Фамилия</th>
+                    <th>Имя</th>
+                    <th>Отчество</th>
+                    <th>Дата</th>
+                    <th>Действие</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for verifies in verify %}
+                    {% if verifies['status'] == 'wait' %}
+                    <tr>
+                        <td>{{ verifies['id'] }}</td>
+                        <td>{{ verifies['tg_id'] }}</td>
+                        <td>{{ verifies['name_1'] }}</td>
+                        <td>{{ verifies['name_2'] }}</td>
+                        <td>{{ verifies['name_3'] }}</td>
+                        <td>{{ verifies['date'] }}</td>
+                        <td>
+                            <button class="openModalBtn" data-tg_id="{{ verifies['tg_id'] }}" data-name_1="{{ verifies['name_1'] }}" data-name_2="{{ verifies['name_2'] }}" data-name_3="{{ verifies['name_3'] }}" data-date="{{ verifies['date'] }}">Проверить</button>
+                        </td>
+                    </tr>
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <h2>Все</h2>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Telegram ID</th>
+                    <th>Фамилия</th>
+                    <th>Имя</th>
+                    <th>Отчество</th>
+                    <th>Дата</th>
+                    <th>Статус</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for verifies in verify %}
+                <tr>
+                    <td>{{ verifies['id'] }}</td>
+                    <td>{{ verifies['tg_id'] }}</td>
+                    <td>{{ verifies['name_1'] }}</td>
+                    <td>{{ verifies['name_2'] }}</td>
+                    <td>{{ verifies['name_3'] }}</td>
+                    <td>{{ verifies['date'] }}</td>
+                    <td>{{ verifies['status'] }}</td>
+                </tr>            
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div id="verify-modal" class="modal">
+        <div class="modal-content">
+            <span id="closeVerifyModal" class="close">&times;</span>
+            <h3>Проверка: <span id="modalTgId"></span></h3>
+            <img id="modalUserPic" src="" alt="Фото пользователя">
+            <div class='user-info'>
+                <p id="modalName1"></p>
+                <p id="modalName2"></p>
+                <p id="modalName3"></p>
+                <p id="modalDate"></p>
+            </div>
+            <div class="verify-buttons">
+                <button id="acceptBtn">Подтвердить</button>
+                <button id="rejectBtn">Отклонить</button>
+            </div>
+            <div id="resultMessage"></div>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- Ваши мета-теги и другие ссылки -->
+  <meta charset="UTF-8">
+  <title>Ваше приложение</title>
+
+  <!-- Подключаем Telegram Web Apps SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- Ваши другие скрипты или стили -->
+
+  <!-- Добавляем JavaScript-функции для взаимодействия с Telegram WebApp -->
+  <script>
+
+    window.Telegram.WebApp.ready();
+    const tg = window.Telegram.WebApp;
+    tg.disableVerticalSwipes()
+    tg.setHeaderColor("#FFFFFF");
+    tg.expand();
+
+    function initTelegramWebApp() {
+      if (window.Telegram) {
+        Telegram.WebApp.ready();
+        return Telegram.WebApp.initDataUnsafe;
+      }
+      return null;
+    }
+
+    function sendTelegramData(data) {
+      if (window.Telegram) {
+        Telegram.WebApp.sendData(data);
+      }
+    }
+
+    function setMainButton(text, isVisible) {
+      if (window.Telegram) {
+        Telegram.WebApp.MainButton.setText(text);
+        if (isVisible) {
+          Telegram.WebApp.MainButton.show();
+        } else {
+          Telegram.WebApp.MainButton.hide();
+        }
+      }
+    }
+  </script>
+
+  <!-- Flutter initialization JS code -->
+  <script src="flutter.js" defer></script>
+</head>
+<body>
+  <!-- Ваше содержимое -->
+  <!-- Скрипт для инициализации Flutter приложения -->
+  <script>
+    window.addEventListener('load', function(ev) {
+      _flutter.loader.loadEntrypoint({
+        onEntrypointLoaded: function(engineInitializer) {
+          engineInitializer.initializeEngine().then(function(appRunner) {
+            appRunner.runApp();
+          });
+        }
+      });
+    });
+  </script>
+
+<script>
+  let videoElement = null;
+  let canvasElement = null;
+  let context = null;
+  let stream = null;
+
+  function openCamera() {
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(function(mediaStream) {
+        stream = mediaStream;
+
+        videoElement = document.getElementById('videoElement');
+        if (videoElement) {
+          videoElement.srcObject = stream;
+          videoElement.play();
+        }
+
+        canvasElement = document.createElement('canvas');
+        context = canvasElement.getContext('2d');
+      })
+      .catch(function(err) {
+        console.error('Ошибка доступа к камере:', err);
+        alert('Ошибка доступа к камере');
+      });
+  }
+
+  function takePhoto() {
+    if (videoElement && context) {
+      canvasElement.width = videoElement.videoWidth;
+      canvasElement.height = videoElement.videoHeight;
+      context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+
+      const dataUrl = canvasElement.toDataURL('image/png');
+      console.log('Фото захвачено:', dataUrl);
+      alert('Фото сделано!');
+    }
+  }
+</script>
+
+<script>
+  // Функция для выбора изображений
+  function selectImages() {
+    return new Promise(function(resolve, reject) {
+      var input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.multiple = true;
+
+      input.onchange = function(event) {
+        var files = input.files;
+        if (files.length > 0) {
+          var fileReaders = [];
+          var images = [];
+
+          for (var i = 0; i < files.length; i++) {
+            (function(file) {
+              var reader = new FileReader();
+              reader.onload = function(e) {
+                images.push({
+                  name: file.name,
+                  data: e.target.result
+                });
+                if (images.length === files.length) {
+                  resolve(images);
+                }
+              };
+              reader.onerror = function(e) {
+                reject(e);
+              };
+              reader.readAsDataURL(file);
+            })(files[i]);
+          }
+        } else {
+          resolve([]);
+        }
+      };
+
+      input.click();
+    });
+  }
+
+  // Функция для выбора изображений и видео
+  function selectImagesAndVideos() {
+    return new Promise(function(resolve, reject) {
+      var input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*,video/*';
+      input.multiple = true;
+
+      input.onchange = function(event) {
+        var files = input.files;
+        if (files.length > 0) {
+          var fileReaders = [];
+          var mediaFiles = [];
+
+          for (var i = 0; i < files.length; i++) {
+            (function(file) {
+              var reader = new FileReader();
+              reader.onload = function(e) {
+                mediaFiles.push({
+                  name: file.name,
+                  data: e.target.result,
+                  type: file.type
+                });
+                if (mediaFiles.length === files.length) {
+                  resolve(mediaFiles);
+                }
+              };
+              reader.onerror = function(e) {
+                reject(e);
+              };
+              reader.readAsDataURL(file);
+            })(files[i]);
+          }
+        } else {
+          resolve([]);
+        }
+      };
+
+      input.click();
+    });
+  }
+</script>
+
+
+</body>
+</html>

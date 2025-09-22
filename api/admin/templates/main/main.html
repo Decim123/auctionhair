@@ -1,0 +1,10 @@
+{% extends "main/base.html" %}
+
+{% block title %}Главная страница{% endblock %}
+
+{% block content %}
+    <p><strong>Логин:</strong> {{ user['login'] }}</p>
+    <p><strong>Статус:</strong> {{ user['status'] }}</p>
+    <p><strong>Телеграм ID:</strong> {{ user['tg_id'] }}</p>
+    <p><strong>Дата регистрации:</strong> {{ user['reg_date'] }}</p>
+{% endblock %}

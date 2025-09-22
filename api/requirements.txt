@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+aiosqlite
+aiohttp
+python-multipart
+jinja2
+bcrypt==3.2.0
+pyjwt
+passlib[bcrypt]
+requests
+Pillow
+opencv-python

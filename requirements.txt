@@ -1,0 +1,12 @@
+aiogram
+environs
+httpx
+fastapi
+uvicorn
+aiosqlite
+aiohttp
+python-multipart
+jinja2
+bcrypt==3.2.0
+pyjwt
+passlib[bcrypt]

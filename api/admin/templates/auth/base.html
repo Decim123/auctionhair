@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vite - {% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ request.url_for('static', path='css/auth/base.css') }}">
+</head>
+<body>
+
+    <div class="auth">
+        <div class="logo-container">
+            <img src="{{ url_for('static', path='img/logo.svg') }}" alt="Logo" width="32" height="32">
+        </div>
+        <div class="vite-text">
+            <strong>Vite</strong>
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+</body>
+</html>
